@@ -27,14 +27,14 @@ x = np.array([1, 2, 3])
 y = np.array([1, 2, 3])
 
 #2. 모델구성
-model = Sequential()
+model = Sequential() #신경망을 순차적으로 만든 시퀀셜모델
 model.add(Dense(1, input_dim=1)) 
 # input_dim=1은 x가 1차원이라는 뜻 Dense()에서 앞의 1은 뭐고 뒤의 1은 뭐지?
 # 하나는 x 하나는 y라고 하셨는데
 
 #3. 컴파일 훈련
 model.compile(loss='mse', optimizer='adam') 
-# mse는 mean squared error(평균 제곱 오차)로 오차율을 줄이는 방법 중 하나이다.
+# mse는 mean squared error(평균 제곱 오차)로 오차율을 줄이는 방법 중 하나이다.(mse는 나중에 설명해준다고 하심)
 # y=ax+b의 선과 데이터들의 거리 간격 차이가 loss(손실율)
 # optimizer는 손실율을 줄이는 방법을 말한다. adam은 최적화 알고리즘 중 하나이다.(adam은 그냥 외우라고 하셨음)
 

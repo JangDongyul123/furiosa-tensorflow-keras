@@ -16,6 +16,7 @@ model.add(Dense(1, input_dim=2))
 model.compile(loss = 'mse', optimizer= 'adam')
 model.fit(x,y,epochs=1000) #batch_size=3 이면 데이터 3개씩, 디폴트는 32개씩 학습한다.
 
+
 #4. 평가 예측
 loss = model.evaluate(x,y)
 print("loss: "+str(loss))

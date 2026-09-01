@@ -9,8 +9,8 @@ y = np.array([1, 2, 3, 5, 4, 6])
 #2. 모델구성
 model = Sequential()
 model.add(Dense(1, input_dim=1)) #하이퍼파라미터 튜닝
-model.add(Dense(100, input_dim=1))
-model.add(Dense(1, input_dim=100))
+model.add(Dense(3, input_dim=1))
+model.add(Dense(1, input_dim=3))
 
 #3. 컴파일 훈련
 model.compile(loss = 'mse', optimizer= 'adam')
