@@ -8,10 +8,8 @@ y = np.array([1, 2, 4 ,3, 5])
 
 #2. 모델구성
 model = Sequential()
-model.add(Dense(1, input_dim=1))
-model.add(Dense(2, input_dim=1))
-model.add(Dense(1, input_dim=2))
-model.add(Dense(1, input_dim=1))
+model.add(Dense(3, input_dim=1))
+model.add(Dense(1))
 
 #3. 컴파일 훈련
 model.compile(loss = 'mse', optimizer= 'adam')
