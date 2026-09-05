@@ -1,3 +1,4 @@
+# 이 링크에서 .csv파일을 다운로드 받으셔야 합니다.
 # https://www.kaggle.com/competitions/bike-sharing-demand/data
 
 import numpy as np
