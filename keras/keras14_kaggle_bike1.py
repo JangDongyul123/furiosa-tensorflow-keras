@@ -33,10 +33,10 @@ print(train_csv.info())
 print(test_csv.info())
 print(submission.info())
 
-print(train_csv.describe)
+print(train_csv.describe())
 ############################### 결측치 확인 ###############################
-print(train_csv.isna.sum())
-print(train_csv.isnull.sum())
+print(train_csv.isna().sum())
+print(train_csv.isnull().sum())
 
 
 ############################### x,y 분리 ###############################
