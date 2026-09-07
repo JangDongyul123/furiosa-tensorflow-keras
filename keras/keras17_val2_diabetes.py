@@ -1,3 +1,5 @@
+# [실습] 당뇨병 데이터셋 - Validation 분할 적용하기
+
 from sklearn.datasets import fetch_california_housing, load_diabetes
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
@@ -18,7 +20,7 @@ print(x, y)
 #2. 모델 구성
 
 model = Sequential()
-model.add(Dense(10, input_dim = 10))
+model.add(Dense(10, input_dim = x.shape[1]))
 model.add(Dense(10))
 model.add(Dense(10))
 model.add(Dense(10))
@@ -26,7 +28,12 @@ model.add(Dense(1))
 
 #3. 컴파일, 훈련
 model.compile(loss = 'mse', optimizer = 'adam')
-model.fit(x_train, y_train, epochs= 1000, batch_size=500 )
+model.fit(x_train, 
+          y_train, 
+          epochs= 1000, 
+          batch_size=500, 
+          verbose=1, 
+          validation_split= 0.33 )
 
 #4. 평가, 예측
 
