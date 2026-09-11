@@ -60,13 +60,23 @@ print(x_train.shape, x_test.shape)  # (142, 13), (36, 13)
 print(y_train.shape, y_test.shape)  # (142,), (36,)
 
 
-from sklearn.preprocessing import MinMaxScaler
-scaler = MinMaxScaler()
+from sklearn.preprocessing import StandardScaler, MaxAbsScaler, MinMaxScaler, RobustScaler
+# scaler = StandardScaler()
+
+# scaler = MaxAbsScaler()
+
+# scaler = MinMaxScaler()
+
+scaler = RobustScaler()
+
 scaler.fit(x_train)
-# x_train 데이터를 보유한 데이터, 
-# x_test를 미래 데이터라고 가정한다.
-# 나중에 대회에서도 private 데이터가 아닌 우리가 보유한 데이터를 기준으로 스케일링할 것이 아닌가?
-# 그러므로 x_train 데이터를 기준으로 스케일링한다.
+# =================================================================================
+# [ 스케일러 학습 (Fit) 주의사항 ]
+# x_train 데이터만 이용해서 스케일링 기준(Min/Max, Mean/Std 등)을 학습합니다.
+# x_val, x_test, 그리고 실전(Kaggle 등)의 미래 데이터는
+# 오직 x_train에서 학습한 동일한 기준으로 transform만 수행해야 합니다.
+# (Validation/Test 데이터의 정보가 스케일러에 미리 반영되는 것을 방지하기 위함)
+# =================================================================================
 
 
 x_train = scaler.transform(x_train)

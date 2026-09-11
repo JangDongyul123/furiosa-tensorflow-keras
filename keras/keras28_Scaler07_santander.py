@@ -1,3 +1,4 @@
+from sklearn.discriminant_analysis import StandardScaler
 import time
 import numpy as np
 import pandas as pd
@@ -10,7 +11,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler, RobustScaler
 from sklearn.metrics import accuracy_score, roc_auc_score
 
 
@@ -92,6 +93,12 @@ print("x_test  :", x_test.shape)
 # =================================================================================
 
 scaler = MinMaxScaler()
+
+# scaler = StandardScaler()
+
+# scaler = MaxAbsScaler()
+
+# scaler = RobustScaler()
 
 x_train = scaler.fit_transform(x_train).astype('float32')
 x_val = scaler.transform(x_val).astype('float32')
@@ -298,7 +305,7 @@ model.compile(
     loss='categorical_crossentropy',
 
     optimizer=Adam(
-        learning_rate=0.0003
+        learning_rate=0.000001
     ),
 
     metrics=[
@@ -313,7 +320,7 @@ es_cce = EarlyStopping(
 
     monitor='val_auc',
 
-    patience=10,
+    patience=100,
 
     mode='max',
 
@@ -334,7 +341,7 @@ history_cce = model.fit(
         y_val
     ),
 
-    epochs=100,
+    epochs=1000,
 
     batch_size=1024,
 

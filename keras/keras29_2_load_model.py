@@ -1,7 +1,9 @@
+#29 save 실습
+
 # [실습] Min-Max Scaler 이해하기 - 캘리포니아 주택 가격 데이터셋
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.datasets import fetch_california_housing
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense
 from sklearn.model_selection import train_test_split
 import numpy as np
@@ -73,12 +75,26 @@ print(np.min(x_train), np.max(x_train))
 # exit()
 
 #2. 모델구성
-model = Sequential()
-model.add(Dense(16, input_dim=8 , activation= 'relu'))
-model.add(Dense(8, activation= 'relu'))
-model.add(Dense(4, activation= 'relu'))
-model.add(Dense(2, activation= 'relu'))
-model.add(Dense(1))
+# model = Sequential()
+# model.add(Dense(16, input_dim=8 , activation= 'relu'))
+# model.add(Dense(8, activation= 'relu'))
+# model.add(Dense(4, activation= 'relu'))
+# model.add(Dense(2, activation= 'relu'))
+# model.add(Dense(1))
+
+# model.summary()
+
+path = './_save/keras29/'
+
+# model.save(path + 'keras29_1_save_model.keras')
+
+model = load_model(path + 'keras29_1_save_model.keras')
+# 저장된 모델을 가져온다.
+
+model.summary()
+
+
+# exit()
 
 #3. 컴파일, 훈련
 model.compile(loss='mse', optimizer='adam')

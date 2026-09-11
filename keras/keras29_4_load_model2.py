@@ -1,7 +1,9 @@
+#29 save 실습
+
 # [실습] Min-Max Scaler 이해하기 - 캘리포니아 주택 가격 데이터셋
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.datasets import fetch_california_housing
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense
 from sklearn.model_selection import train_test_split
 import numpy as np
@@ -73,28 +75,42 @@ print(np.min(x_train), np.max(x_train))
 # exit()
 
 #2. 모델구성
-model = Sequential()
-model.add(Dense(16, input_dim=8 , activation= 'relu'))
-model.add(Dense(8, activation= 'relu'))
-model.add(Dense(4, activation= 'relu'))
-model.add(Dense(2, activation= 'relu'))
-model.add(Dense(1))
+# model = Sequential()
+# model.add(Dense(16, input_dim=8 , activation= 'relu'))
+# model.add(Dense(8, activation= 'relu'))
+# model.add(Dense(4, activation= 'relu'))
+# model.add(Dense(2, activation= 'relu'))
+# model.add(Dense(1))
+
+# model.summary()
+
+path = './_save/keras29/'
+
+# model.save(path + 'keras29_1_save_model.keras')
+
+model = load_model(path + 'keras29_3_save_model.keras')
+# 저장된 모델을 가져온다.
+
+model.summary()
+
+
+# exit()
 
 #3. 컴파일, 훈련
-model.compile(loss='mse', optimizer='adam')
+# model.compile(loss='mse', optimizer='adam')
 
-# 훈련 시간 측정 시작
-start_time = time.time() # 현재 시스템 시간을 기록 (시작 시간)
+# # 훈련 시간 측정 시작
+# start_time = time.time() # 현재 시스템 시간을 기록 (시작 시간)
 
-hist = model.fit(x_train, 
-          y_train, 
-          epochs=100, 
-          batch_size=32,
-          verbose=0,
-          validation_split=0.2
-          )
+# hist = model.fit(x_train, 
+#           y_train, 
+#           epochs=100, 
+#           batch_size=32,
+#           verbose=0,
+#           validation_split=0.2
+#           )
 
-end_time = time.time() # 학습 완료 후의 시스템 시간을 기록 (종료 시간)
+# end_time = time.time() # 학습 완료 후의 시스템 시간을 기록 (종료 시간)
 
 #4. 평가, 예측
 print("========================================")
@@ -102,18 +118,18 @@ loss = model.evaluate(x_test, y_test, batch_size = 32)
 print("========================================")
 y_pred = model.predict(x_test, batch_size = 32)
 
-print("걸린 시간: ", round(end_time- start_time, 2), "초")
-# 참고: round(x, 2)는 소수점 둘째 자리까지 반올림합니다.
+# print("걸린 시간: ", round(end_time- start_time, 2), "초")
+# # 참고: round(x, 2)는 소수점 둘째 자리까지 반올림합니다.
 
-print("================= history =================")
-print(hist)
-print("================= hist.history =================")
-print(hist.history)
-print("================= loss =================")
-print(hist.history['loss'])
-print("================= val_loss =================")
-print(hist.history['val_loss'])
-print("==================================")
+# print("================= history =================")
+# print(hist)
+# print("================= hist.history =================")
+# print(hist.history)
+# print("================= loss =================")
+# print(hist.history['loss'])
+# print("================= val_loss =================")
+# print(hist.history['val_loss'])
+# print("==================================")
 
 mse = mean_squared_error(y_test, y_pred)
 
