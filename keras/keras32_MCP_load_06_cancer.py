@@ -1,8 +1,9 @@
+from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_squared_error
 import numpy as np
 import pandas as pd
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense
 from sklearn.model_selection import train_test_split
 import time
@@ -114,55 +115,8 @@ print(y_test.shape)  #(171, )
 
 
 
-
-
-
 #2. 모델 구성
-model = Sequential()
-model.add(Dense(7000, input_dim = x.shape[1], activation = 'relu'))
-model.add(Dense(9000, activation = 'relu'))
-model.add(Dense(7000, activation = 'relu'))
-model.add(Dense(3000, activation = 'relu'))
-model.add(Dense(2000, activation = 'relu'))
-model.add(Dense(1000, activation = 'relu'))
-model.add(Dense(500, activation = 'relu'))
-model.add(Dense(1, activation='sigmoid')) 
-# 이진 분류에서는 마지막 레이어에 sigmoid를 사용한다. 확률을 반환한다.
-# 외워라
-# sigmoid는 입력값에 상관없이 항상 0과 1 사이의 값을 반환합니다.
-# activation은 활성화 함수 또는 함정함수라고 부른다.
-
-#3. 컴파일 훈련
-model.compile(loss = 'binary_crossentropy', 
-              optimizer = 'adam', 
-              metrics = ['accuracy']) 
-# 외워라 이진분류에서는 loss를 'binary_crossentropy' 를 사용한다.
-# 이진분류는 0이냐 1이냐를 찾는다.
-# loss는 역전파와 w 갱신을 위해 사용한다.
-# metrix는 accuracy라는 보조지표를 이용한다.
-# accuracy가 0.92가 나오면 적중률 92%라는 뜻 
-# val_acc 값이  
-
-es = EarlyStopping(
-    monitor='val_loss',  # 훈련 손실(loss)을 관찰합니다.
-    patience=100,     # 20 epoch 동안 성능 향상이 없으면 멈춥니다.
-    mode='min',      # loss는 낮을수록 좋으므로 최소(min)값을 추적합니다.
-    restore_best_weights=True #  
-)
-
-start_time = time.time()
-
-model.fit(x_train,
-        y_train,
-        epochs = 30000, 
-          batch_size = x.shape[0], 
-          verbose = 0, 
-          validation_split=0.3,
-          callbacks = [es]
-          )
-end_time = time.time()
-
-#4. 평가 예측
+model = load_model('C:\study\_save\keras31\k31_0914_1440-_0027-0.1438.keras')
 
 print("================================")
 loss = model.evaluate(x_test, y_test)

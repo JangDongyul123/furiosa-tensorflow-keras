@@ -1,8 +1,9 @@
+from tensorflow.keras.callbacks import ModelCheckpoint
 import numpy as np
 import pandas as pd
 import time
 
-from sklearn.datasets import fetch_covtype
+from sklearn.datasets import load_wine
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
@@ -15,24 +16,34 @@ from tensorflow.keras.callbacks import EarlyStopping
 # 1. 데이터
 # =================================================================================
 
-datasets = fetch_covtype()
+datasets = load_wine()
 
 x = datasets['data']       # 입력 데이터
 y = datasets['target']     # 정답 데이터
 
-print(x.shape)  # (581012, 54)
-print(y.shape)  # (581012,)
+print(x.shape)  # (178, 13)
+print(y.shape)  # (178,)
 
 print(np.unique(y, return_counts=True))
 
-# (array([1, 2, 3, 4, 5, 6, 7]), array([211840, 283301,  35754,   2747,   9493,  17367,  20510]))
+# (array([0, 1, 2]), array([59, 71, 48]))
 #
-# 클래스가 1부터 7까지 7개 존재한다. (0은 없음)
+# 클래스 0 : 59개
+# 클래스 1 : 71개
+# 클래스 2 : 48개
 
 
 # =================================================================================
 # 2. train / test 분리
 # =================================================================================
+
+'''
+현재 y는 아직 원-핫 인코딩 전이다.
+
+stratify=y의 의미:
+원래 y에 존재하는 클래스 비율을
+train과 test에서도 최대한 동일하게 유지해서 나눈다.
+'''
 
 x_train, x_test, y_train, y_test = train_test_split(
     x,
@@ -43,9 +54,8 @@ x_train, x_test, y_train, y_test = train_test_split(
     stratify=y
 )
 
-print(x_train.shape, x_test.shape)  # (464809, 54), (116203, 54)
-print(y_train.shape, y_test.shape)  # (464809,), (116203,)
-
+print(x_train.shape, x_test.shape)  # (142, 13), (36, 13)
+print(y_train.shape, y_test.shape)  # (142,), (36,)
 
 from sklearn.preprocessing import StandardScaler, MaxAbsScaler, MinMaxScaler
 # scaler = StandardScaler()
@@ -81,41 +91,31 @@ print(x, y)
 # =================================================================================
 
 '''
-fetch_covtype 데이터는 정답 클래스가 1부터 7까지이다.
+다중분류의 정답이 클래스 번호로 되어 있을 때,
+원-핫 인코딩을 통해 배열 형태로 변환한다.
 
-TensorFlow의 to_categorical을 사용할 때 주의할 점:
-to_categorical은 값이 1~7이더라도, 0번 클래스가 있는 것으로 인식해서
-크기가 8인 원-핫 벡터([0, 1, 0, ..., 0])를 만들어버린다. (shape: N, 8)
-
-반면 pandas의 get_dummies나 sklearn의 OneHotEncoder는 
-존재하는 1~7 클래스에 대해서만 7개의 열을 생성한다. (shape: N, 7)
-
-여기서는 pandas의 get_dummies를 사용하여 7개의 열로 인코딩한다.
+Wine 데이터의 클래스가 3개이므로 원-핫 인코딩 후 열이 3개 생긴다.
 '''
 
+# -------------------------------------------------------------------------
+# 원-핫 방법 1. TensorFlow - to_categorical
+# -------------------------------------------------------------------------
+
+from tensorflow.keras.utils import to_categorical
+
+y_train = to_categorical(y_train)
+y_test = to_categorical(y_test)
+
+print(y_train.shape)  # (142, 3)
+print(y_test.shape)   # (36, 3)
 
 
 # -------------------------------------------------------------------------
 # 원-핫 방법 2. pandas - get_dummies
 # -------------------------------------------------------------------------
 
-y_train = pd.get_dummies(y_train, dtype=int).values
-y_test = pd.get_dummies(y_test, dtype=int).values
-
-print(y_train.shape)  # (464809, 7)
-print(y_test.shape)   # (116203, 7)
-
-
-# -------------------------------------------------------------------------
-# 원-핫 방법 1. TensorFlow - to_categorical
-# -------------------------------------------------------------------------
-
-# from tensorflow.keras.utils import to_categorical
-# 
-# y_train = to_categorical(y_train)
-# y_test = to_categorical(y_test)
-#
-# print(y_train.shape) # (464809, 8) 이 됨 주의!
+# y_train = pd.get_dummies(y_train, dtype=int).values
+# y_test = pd.get_dummies(y_test, dtype=int).values
 
 
 # -------------------------------------------------------------------------
@@ -141,29 +141,28 @@ model = Sequential()
 
 model.add(
     Dense(
-        500,
+        64,
         activation='relu',
         input_dim=x.shape[1]
     )
 )
 
-model.add(Dense(500, activation='relu'))
-model.add(Dense(250, activation='relu'))
-model.add(Dense(125, activation='relu'))
-
+model.add(Dense(32, activation='relu'))
+model.add(Dense(16, activation='relu'))
 
 model.add(
     Dense(
-        y_train.shape[1],  # 7
+        3,
         activation='softmax'
     )
 )
 
 '''
-출력층의 뉴런이 7개인 이유:
-get_dummies로 원-핫 인코딩한 y의 열 개수가 7개이기 때문이다.
+출력층의 뉴런이 3개인 이유:
+Wine 데이터셋의 클래스가 총 3개(0, 1, 2)이기 때문이다.
 
-만약 to_categorical을 사용했다면 열 개수가 8이 되므로 Dense(8)로 해야 한다.
+softmax는 다중분류의 출력층에서 주로 사용하는 활성화 함수이다.
+모든 출력값의 합이 1이 되도록 각 클래스에 속할 확률을 계산해준다.
 '''
 
 
@@ -177,6 +176,11 @@ model.compile(
     metrics=['accuracy']
 )
 
+'''
+categorical_crossentropy는
+원-핫 인코딩된 정답을 사용하는 다중분류에서 주로 사용한다.
+'''
+
 
 # =================================================================================
 # 6. EarlyStopping
@@ -185,8 +189,31 @@ model.compile(
 es = EarlyStopping(
     monitor='val_loss',
     patience=10,
-    mode='auto',
-    restore_best_weights=True
+    mode='min',
+    restore_best_weights= True,
+    verbose=1
+)
+
+############# mcp 세이브 파일명 만들기 #############
+
+import datetime
+date = datetime.datetime.now()
+print(date) # 2026-09-14 11:42:07 .201728
+print(type(date)) #<class 'datetime.datetime'>
+date = date.strftime("%m%d_%H%M") #month day, hour, minutes
+print(date)
+print(type(date)) #<class 'str'>
+
+path = './_save/keras31/'
+file_name = '_{epoch:04d}-{val_loss:.4f}.keras' # 04d는 4자리 정수, .4f는 소수점 4째자리까지
+filepath = "".join([path, "k31_" ,date,"-", file_name])
+
+mcp = ModelCheckpoint(
+    monitor = 'val_loss',
+    mode = 'auto',
+    save_best_only=True,
+    filepath = filepath,
+    verbose=1,
 )
 
 
@@ -196,15 +223,14 @@ es = EarlyStopping(
 
 start_time = time.time()
 
-# 데이터가 58만 개로 크기 때문에 batch_size를 늘려준다.
 model.fit(
     x_train,
     y_train,
     epochs=1000,
-    batch_size=10240, # 102400은 너무 커서 OOM(메모리 부족) 또는 학습 저하를 유발할 수 있으므로 적절한 크기로 조정
+    batch_size=16,
     validation_split=0.2,
     verbose=1,
-    callbacks=[es]
+    callbacks=[es,mcp]
 )
 
 end_time = time.time()
@@ -218,7 +244,7 @@ result = model.evaluate(x_test, y_test)
 
 print("loss :", result[0])
 print("accuracy :", result[1])
-# acc : 0.93 이상
+# acc = 0.95 이상이면 합격
 
 
 # =================================================================================
@@ -226,28 +252,34 @@ print("accuracy :", result[1])
 # =================================================================================
 
 y_pred = model.predict(x_test)
+
+print("softmax 출력 (일부)")
+print(y_pred[:5])
+
+'''
+model.predict()의 결과는 softmax 출력값이다.
+각 행에서 가장 큰 값의 위치(인덱스)를 찾아서 최종 예측 클래스를 구한다.
+'''
+
 y_pred = np.argmax(y_pred, axis=1)
 
-print("예측 인덱스 (일부)")
-print(y_pred[:10])
+print("예측 클래스 (일부)")
+print(y_pred[:5])
 
 
 # =================================================================================
-# 10. 원-핫 정답을 다시 변환
+# 10. 원-핫 정답을 다시 클래스 번호로 변환
 # =================================================================================
 
 '''
-pandas get_dummies로 변환한 결과를 np.argmax 하면 열 인덱스(0부터 6까지)가 나온다.
-마찬가지로 모델의 예측값(y_pred)도 0부터 6까지의 인덱스를 출력한다.
-
-실제 클래스는 1부터 7까지이지만,
-인덱스(0~6)끼리 비교하여 정확도를 구하는 데는 문제가 없으므로 그대로 사용한다.
+accuracy_score로 실제 클래스와 예측 클래스를 비교하기 위해
+원-핫 인코딩된 y_test를 다시 원래 클래스 번호 형태로 바꾼다.
 '''
 
 y_test = np.argmax(y_test, axis=1)
 
-print("실제 인덱스 (일부)")
-print(y_test[:10])
+print("실제 클래스 (일부)")
+print(y_test[:5])
 
 
 # =================================================================================

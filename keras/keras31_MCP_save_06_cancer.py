@@ -1,3 +1,4 @@
+from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.metrics import r2_score
 from sklearn.metrics import mean_squared_error
 import numpy as np
@@ -113,10 +114,6 @@ print(y_train.shape) #(398, )
 print(y_test.shape)  #(171, )
 
 
-
-
-
-
 #2. 모델 구성
 model = Sequential()
 model.add(Dense(7000, input_dim = x.shape[1], activation = 'relu'))
@@ -144,10 +141,33 @@ model.compile(loss = 'binary_crossentropy',
 # val_acc 값이  
 
 es = EarlyStopping(
-    monitor='val_loss',  # 훈련 손실(loss)을 관찰합니다.
-    patience=100,     # 20 epoch 동안 성능 향상이 없으면 멈춥니다.
-    mode='min',      # loss는 낮을수록 좋으므로 최소(min)값을 추적합니다.
-    restore_best_weights=True #  
+    monitor='val_loss',
+    patience=10,
+    mode='min',
+    restore_best_weights= True,
+    verbose=1
+)
+
+############# mcp 세이브 파일명 만들기 #############
+
+import datetime
+date = datetime.datetime.now()
+print(date) # 2026-09-14 11:42:07 .201728
+print(type(date)) #<class 'datetime.datetime'>
+date = date.strftime("%m%d_%H%M") #month day, hour, minutes
+print(date)
+print(type(date)) #<class 'str'>
+
+path = './_save/keras31/'
+file_name = '_{epoch:04d}-{val_loss:.4f}.keras' # 04d는 4자리 정수, .4f는 소수점 4째자리까지
+filepath = "".join([path, "k31_" ,date,"-", file_name])
+
+mcp = ModelCheckpoint(
+    monitor = 'val_loss',
+    mode = 'auto',
+    save_best_only=True,
+    filepath = filepath,
+    verbose=1,
 )
 
 start_time = time.time()
@@ -158,7 +178,7 @@ model.fit(x_train,
           batch_size = x.shape[0], 
           verbose = 0, 
           validation_split=0.3,
-          callbacks = [es]
+          callbacks = [es, mcp]
           )
 end_time = time.time()
 

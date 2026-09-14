@@ -1,3 +1,4 @@
+from tensorflow.keras.callbacks import ModelCheckpoint
 import numpy as np
 import pandas as pd
 import time
@@ -6,7 +7,7 @@ from sklearn.datasets import fetch_covtype
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.callbacks import EarlyStopping
 
@@ -137,77 +138,7 @@ print(y_test.shape)   # (116203, 7)
 # 4. 모델 구성
 # =================================================================================
 
-model = Sequential()
-
-model.add(
-    Dense(
-        500,
-        activation='relu',
-        input_dim=x.shape[1]
-    )
-)
-
-model.add(Dense(500, activation='relu'))
-model.add(Dense(250, activation='relu'))
-model.add(Dense(125, activation='relu'))
-
-
-model.add(
-    Dense(
-        y_train.shape[1],  # 7
-        activation='softmax'
-    )
-)
-
-'''
-출력층의 뉴런이 7개인 이유:
-get_dummies로 원-핫 인코딩한 y의 열 개수가 7개이기 때문이다.
-
-만약 to_categorical을 사용했다면 열 개수가 8이 되므로 Dense(8)로 해야 한다.
-'''
-
-
-# =================================================================================
-# 5. 컴파일
-# =================================================================================
-
-model.compile(
-    loss='categorical_crossentropy',
-    optimizer='adam',
-    metrics=['accuracy']
-)
-
-
-# =================================================================================
-# 6. EarlyStopping
-# =================================================================================
-
-es = EarlyStopping(
-    monitor='val_loss',
-    patience=10,
-    mode='auto',
-    restore_best_weights=True
-)
-
-
-# =================================================================================
-# 7. 훈련
-# =================================================================================
-
-start_time = time.time()
-
-# 데이터가 58만 개로 크기 때문에 batch_size를 늘려준다.
-model.fit(
-    x_train,
-    y_train,
-    epochs=1000,
-    batch_size=10240, # 102400은 너무 커서 OOM(메모리 부족) 또는 학습 저하를 유발할 수 있으므로 적절한 크기로 조정
-    validation_split=0.2,
-    verbose=1,
-    callbacks=[es]
-)
-
-end_time = time.time()
+model = load_model('C:\study\_save\keras31\k31_0914_1452-_0054-0.3162.keras')
 
 
 # =================================================================================
@@ -257,4 +188,3 @@ print(y_test[:10])
 acc_score = accuracy_score(y_test, y_pred)
 
 print('acc_score :', acc_score)
-print("걸린 시간 :", round(end_time - start_time), "초")

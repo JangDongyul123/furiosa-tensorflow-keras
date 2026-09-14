@@ -1,3 +1,4 @@
+from tensorflow.keras.callbacks import ModelCheckpoint
 import numpy as np
 import pandas as pd
 import time
@@ -184,11 +185,33 @@ model.compile(
 
 es = EarlyStopping(
     monitor='val_loss',
-    patience=10,
-    mode='auto',
-    restore_best_weights=True
+      patience=10,
+    mode='min',
+    restore_best_weights= True,
+    verbose=1
 )
 
+############# mcp 세이브 파일명 만들기 #############
+
+import datetime
+date = datetime.datetime.now()
+print(date) # 2026-09-14 11:42:07 .201728
+print(type(date)) #<class 'datetime.datetime'>
+date = date.strftime("%m%d_%H%M") #month day, hour, minutes
+print(date)
+print(type(date)) #<class 'str'>
+
+path = './_save/keras31/'
+file_name = '_{epoch:04d}-{val_loss:.4f}.keras' # 04d는 4자리 정수, .4f는 소수점 4째자리까지
+filepath = "".join([path, "k31_" ,date,"-", file_name])
+
+mcp = ModelCheckpoint(
+    monitor = 'val_loss',
+    mode = 'auto',
+    save_best_only=True,
+    filepath = filepath,
+    verbose=1,
+)
 
 # =================================================================================
 # 7. 훈련
@@ -204,7 +227,7 @@ model.fit(
     batch_size=10240, # 102400은 너무 커서 OOM(메모리 부족) 또는 학습 저하를 유발할 수 있으므로 적절한 크기로 조정
     validation_split=0.2,
     verbose=1,
-    callbacks=[es]
+    callbacks=[es,mcp]
 )
 
 end_time = time.time()

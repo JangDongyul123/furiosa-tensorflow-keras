@@ -1,0 +1,141 @@
+# [실습] Scaler 이해하기 - 보스턴 주택 가격 데이터셋
+
+from tensorflow.keras.callbacks import ModelCheckpoint
+import numpy as np
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.datasets import boston_housing
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.callbacks import EarlyStopping
+#1. 데이터 구성
+(x_train, y_train), (x_test, y_test) = boston_housing.load_data()
+
+
+x = np.concatenate([x_train, x_test], axis=0)
+y = np.concatenate([y_train, y_test], axis=0)
+
+x_train, x_test, y_train, y_test= train_test_split(x,y,train_size=0.7, test_size=0.3)
+
+# =================================================================================
+# [ MinMaxScaler ]
+# 공식: (x - Min) / (Max - Min)
+# 특징: 모든 값을 0 ~ 1 사이의 값으로 변환하여 스케일링합니다.
+# 예시: 데이터의 최대값이 10000이면 1로, 최소값이 -1이면 0으로 변환됩니다.
+# =================================================================================
+
+from sklearn.preprocessing import StandardScaler, MaxAbsScaler, MinMaxScaler
+# scaler = StandardScaler()
+
+# scaler = MaxAbsScaler()
+
+scaler = MinMaxScaler()
+
+scaler.fit(x_train)
+# =================================================================================
+# [ 스케일러 학습 (Fit) 주의사항 ]
+# x_train 데이터만 이용해서 스케일링 기준(Min/Max, Mean/Std 등)을 학습합니다.
+# x_val, x_test, 그리고 실전(Kaggle 등)의 미래 데이터는
+# 오직 x_train에서 학습한 동일한 기준으로 transform만 수행해야 합니다.
+# (Validation/Test 데이터의 정보가 스케일러에 미리 반영되는 것을 방지하기 위함)
+# =================================================================================
+
+
+x_train = scaler.transform(x_train)
+x_test = scaler.transform(x_test)
+
+print(np.min(x_train), np.max(x_train))
+print(np.min(x_test), np.max(x_test))
+
+print(x.shape, y.shape)
+
+print(x, y)
+
+
+#2. 모델 구성
+model = Sequential()
+model.add(Dense(13, input_dim = 13))
+model.add(Dense(1))
+
+# ============================================================
+# EarlyStopping 설정
+# ============================================================
+
+es = EarlyStopping(
+    monitor='val_loss',          # 관찰할 지표 (검증 손실)
+    mode='min',                  # 관찰 지표가 최소가 될 때 최적
+    patience=10,                 # 10 epoch 동안 개선이 없으면 조기 종료
+    restore_best_weights=True    # 조기 종료 시 가장 성능이 좋았던 가중치로 복구
+)
+
+
+#3. 컴파일, 훈련
+model.compile(loss='mse', optimizer='adam')
+
+es = EarlyStopping(
+    monitor='val_loss',
+    patience=10,
+    mode='min',
+    restore_best_weights= True,
+    verbose=1
+)
+
+############# mcp 세이브 파일명 만들기 #############
+
+import datetime
+date = datetime.datetime.now()
+print(date) # 2026-09-14 11:42:07 .201728
+print(type(date)) #<class 'datetime.datetime'>
+date = date.strftime("%m%d_%H%M") #month day, hour, minutes
+print(date)
+print(type(date)) #<class 'str'>
+
+path = './_save/keras31/'
+file_name = '_{epoch:04d}-{val_loss:.4f}.keras' # 04d는 4자리 정수, .4f는 소수점 4째자리까지
+filepath = "".join([path, "k31_" ,date,"-", file_name])
+
+mcp = ModelCheckpoint(
+    monitor = 'val_loss',
+    mode = 'auto',
+    save_best_only=True,
+    filepath = filepath,
+    verbose=1,
+)
+
+hist = model.fit(x_train, 
+          y_train, 
+          verbose=1,
+          epochs=500, 
+          batch_size=100,
+          validation_split=0.33,
+          callbacks=[es, mcp ])        # EarlyStopping 콜백 적용
+
+#4. 평가, 예측
+loss = model.evaluate(x_test, y_test)
+results = model.predict(x)
+# print("results: ", results)
+
+print("================= history =================")
+print(hist)
+print("================= hist.history =================")
+print(hist.history)
+print("================= loss =================")
+print(hist.history['loss'])
+print("================= val_loss =================")
+print(hist.history['val_loss'])
+print("==================================")
+
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(9,6)) # 캔버스(판) 크기 설정
+plt.rcParams['font.family'] = 'Malgun Gothic' # 폰트 설정
+plt.rcParams['axes.unicode_minus'] = False 
+
+plt.plot(hist.history['loss'][2:], c='red', label='loss') # 훈련 손실
+plt.plot(hist.history['val_loss'][2:], c='blue', label='val_loss') # 검증 손실
+
+plt.legend(loc='upper right') # 우측 상단 범례 표시
+plt.title('보스턴 주택 가격 데이터셋 - Loss 그래프')
+plt.xlabel('Epoch') # x축
+plt.ylabel('Loss') # y축
+plt.grid() # 격자 추가
+plt.show() # 출력
