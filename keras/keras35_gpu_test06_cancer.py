@@ -1,3 +1,5 @@
+# CPU 70초, GPU 8.3초
+
 from tensorflow.keras.layers import Dropout
 from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.metrics import r2_score
@@ -193,13 +195,14 @@ start_time = time.time()
 
 model.fit(x_train,
         y_train,
-        epochs = 30000, 
+        epochs = 100, 
           batch_size = x.shape[0], 
           verbose = 0, 
           validation_split=0.3,
-          callbacks = [es, mcp]
+          callbacks = []
           )
 end_time = time.time()
+print(end_time - start_time)
 
 #4. 평가 예측
 
