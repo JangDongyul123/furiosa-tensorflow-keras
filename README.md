@@ -8,7 +8,7 @@
 [![TensorFlow](https://img.shields.io/badge/TensorFlow-Keras-FF6F00?logo=tensorflow&logoColor=white)](https://www.tensorflow.org/)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-F7931E?logo=scikitlearn&logoColor=white)](https://scikit-learn.org/)
 [![GitHub](https://img.shields.io/badge/GitHub-JangDongyul123-181717?logo=github)](https://github.com/JangDongyul123)
-[![Velog](https://img.shields.io/badge/Velog-wordi-20C997?logo=velog&logoColor=white)](https://velog.io/@wordi/series)
+[![Velog](https://img.shields.io/badge/Velog-wordi-20C997?logo=velog&logoColor=white)]([https://velog.io/@wordi/series](https://velog.io/@wordi/series/AI-%EC%97%94%EC%A7%80%EB%8B%88%EC%96%B4%EB%A7%81-%ED%95%99%EC%8A%B5%EB%85%B8%ED%8A%B8)
 
 [📚 학습 필기](#-학습-필기) · [🧪 실습 로드맵](#-실습-로드맵) · [🔥 핵심 실험](#-핵심-실험) · [✍️ 기술 블로그](https://velog.io/@wordi/series)
 
