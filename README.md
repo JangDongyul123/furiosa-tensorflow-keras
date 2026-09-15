@@ -270,10 +270,6 @@ path = "./_data/..."
 
 <div align="center">
 
-### 🚀 Learn · Implement · Visualize · Record
-
-**개념을 이해하고 → 직접 구현하고 → 실험하고 → 기록합니다.**
-
 <br>
 
 ![TensorFlow](https://img.shields.io/badge/Made_with-TensorFlow-FF6F00?style=flat-square\&logo=tensorflow\&logoColor=white)
