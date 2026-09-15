@@ -1,16 +1,21 @@
 <div align="center">
 
-# Furiosa TensorFlow · Keras Study
+# 📘 Furiosa TensorFlow · Keras Study
 
 TensorFlow/Keras 기반 딥러닝 수업 필기와 실습 기록
 
-[학습 필기](#학습-필기-study-notes) · [실습 구성](#실습-구성-practice-structure) · [Velog](https://velog.io/@wordi/series/AI-%EC%97%94%EC%A7%80%EB%8B%88%EC%96%B4%EB%A7%81-%ED%95%99%EC%8A%B5%EB%85%B8%ED%8A%B8)
+[![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![TensorFlow](https://img.shields.io/badge/TensorFlow-Keras-FF6F00?style=flat-square&logo=tensorflow&logoColor=white)](https://www.tensorflow.org/)
+![Study Notes](https://img.shields.io/badge/Study_Notes-11-4C566A?style=flat-square)
+![Practice Files](https://img.shields.io/badge/Practice_Files-125-5E81AC?style=flat-square)
+
+[📚 학습 필기](#-학습-필기-study-notes) · [💻 실습 구성](#-실습-구성-practice-structure) · [✍️ Velog](https://velog.io/@wordi/series/AI-%EC%97%94%EC%A7%80%EB%8B%88%EC%96%B4%EB%A7%81-%ED%95%99%EC%8A%B5%EB%85%B8%ED%8A%B8)
 
 </div>
 
 ---
 
-## 개요 (Overview)
+## 📌 개요 (Overview)
 
 Furiosa AI Agent 과정에서 학습한 TensorFlow/Keras 내용을 정리한 저장소입니다.  
 수업 필기와 실습 코드를 날짜와 주제에 따라 기록하고 있습니다.
@@ -26,9 +31,19 @@ Furiosa AI Agent 과정에서 학습한 TensorFlow/Keras 내용을 정리한 저
 | 모델 관리 | Model Save/Load, Weight Save/Load, ModelCheckpoint |
 | 모델 구조 | Sequential API, Functional API, CNN |
 
+### 학습 흐름
+
+```mermaid
+flowchart LR
+    A["🧠 신경망 기초"] --> B["📈 회귀"]
+    B --> C["🎯 분류"]
+    C --> D["🛠️ 모델 개선"]
+    D --> E["🖼️ CNN"]
+```
+
 ---
 
-## 학습 필기 (Study Notes)
+## 📚 학습 필기 (Study Notes)
 
 | 일차 | 주요 내용 | 필기 | 관련 Velog 글 |
 |---:|---|---|---|
@@ -46,7 +61,7 @@ Furiosa AI Agent 과정에서 학습한 TensorFlow/Keras 내용을 정리한 저
 
 ---
 
-## 학습 내용 예시 (Visual Note)
+## 🖼️ 학습 내용 예시 (Visual Note)
 
 ### 입력 Feature 수와 초평면
 
@@ -66,7 +81,7 @@ Furiosa AI Agent 과정에서 학습한 TensorFlow/Keras 내용을 정리한 저
 
 ---
 
-## 실습 구성 (Practice Structure)
+## 💻 실습 구성 (Practice Structure)
 
 코드 파일은 학습 순서에 따라 번호를 붙여 관리합니다.
 
@@ -83,7 +98,7 @@ Furiosa AI Agent 과정에서 학습한 TensorFlow/Keras 내용을 정리한 저
 
 ---
 
-## 데이터셋 (Datasets)
+## 🗂️ 데이터셋 (Datasets)
 
 | 문제 유형 | 데이터셋 |
 |---|---|
@@ -96,7 +111,7 @@ Furiosa AI Agent 과정에서 학습한 TensorFlow/Keras 내용을 정리한 저
 
 ---
 
-## 개발 환경 (Environment)
+## ⚙️ 개발 환경 (Environment)
 
 - Python
 - TensorFlow / Keras
@@ -113,7 +128,7 @@ pip install tensorflow numpy pandas scikit-learn matplotlib
 
 ---
 
-## 관련 글 (Related Writing)
+## ✍️ 관련 글 (Related Writing)
 
 - [AI 엔지니어링 학습노트 전체 보기](https://velog.io/@wordi/series/AI-%EC%97%94%EC%A7%80%EB%8B%88%EC%96%B4%EB%A7%81-%ED%95%99%EC%8A%B5%EB%85%B8%ED%8A%B8)
 - [딥러닝을 공부하며 깨달은 프롬프트 엔지니어링의 본질](https://velog.io/@wordi/%EB%94%A5%EB%9F%AC%EB%8B%9D%EC%9D%84-%EA%B3%B5%EB%B6%80%ED%95%98%EB%A9%B0-%EA%B9%A8%EB%8B%AC%EC%9D%80-%ED%94%84%EB%A1%AC%ED%94%84%ED%8A%B8-%EC%97%94%EC%A7%80%EB%8B%88%EC%96%B4%EB%A7%81%EC%9D%98-%EB%B3%B8%EC%A7%88)
