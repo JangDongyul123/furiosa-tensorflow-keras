@@ -146,11 +146,6 @@ Feature N개 → N+1 차원의 초평면
   </a>
 </p>
 
-<p align="center">
-  <sub>
-    ChatGPT를 활용해 제작한 학습용 이미지 · 내용 구성 및 검수: 작성자
-  </sub>
-</p>
 
 <div align="center">
 
