@@ -31,8 +31,14 @@ Max - Min
 예) X의 최대값이 10000이면 1 , 최소값이 -1이면 0이 됨
 '''
 
-from sklearn.preprocessing import MinMaxScaler
-scaler = MinMaxScaler()
+# from sklearn.preprocessing import MinMaxScaler
+# scaler = MinMaxScaler()
+
+from sklearn.preprocessing import StandardScaler, MaxAbsScaler, RobustScaler
+scaler = StandardScaler()
+
+# x_train scaler.fit(x_train)
+# x_train = scaler.transform(x_train)
 x_train = scaler.fit_transform(x_train)
 x_test = scaler.transform(x_test)
 

@@ -1,56 +1,31 @@
-# 36 - 2번 카피
+# 36 - Stacking Ensemble (CIFAR-10) - Recompile Test
 
 import numpy as np
 import pandas as pd
-from tensorflow.keras.datasets import mnist
+from tensorflow.keras.datasets import cifar100
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, Dense, Dropout, Flatten
+from tensorflow.keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D, AveragePooling2D
+from tensorflow.keras.callbacks import EarlyStopping
 import time
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
 
+# =================================================================================
 # 1. 데이터
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
-print(x_train.shape, y_train.shape) 
-# (60000, 28, 28), (60000,)
-# 실제로는 흑백데이터라서 채널(channel)이 1개 더 필요하다. -> (60000, 28, 28, 1)
+# =================================================================================
+(x_train, y_train), (x_test, y_test) = cifar100.load_data()
 
-print(x_test.shape, y_test.shape) 
-# (10000, 28, 28), (10000,)
-# 실제로는 흑백데이터라서 채널(channel)이 1개 더 필요하다. -> (10000, 28, 28, 1)
-
-# print(x_train[0])
-
-print(np.max(x_train), np.min(x_train))
-print(np.max(x_test), np.min(x_test))
-
-#### 스케일링 1 - min - max 스케일링
-# x_train = x_train/255.
-# x_test = x_test/255.
-
-# print(np.max(x_train), np.min(x_train)) # 1.0 0.0
-# print(np.max(x_test), np.min(x_test)) # 1.0 0.0
-
-#### 스케일링 2 - max ABS 스케일링
+# 스케일링 (Max ABS -> -1.0 ~ 1.0)
 x_train = (x_train - 127.5) / 127.5
 x_test = (x_test - 127.5) / 127.5
 
-x_train = x_train.reshape(-1, 28,28, 1)
-x_test = x_test.reshape(-1, 28,28, 1)
-
-print(np.max(x_train), np.min(x_train)) # 1.0 -1.0
-print(np.max(x_test), np.min(x_test)) # 1.0 -1.0
-
-from sklearn.preprocessing import OneHotEncoder
-ohe = OneHotEncoder(sparse_output=False) #디폴트 값은 True
-y_train = y_train.reshape(-1,1)
-y_test = y_test.reshape(-1,1)
-y_train = ohe.fit_transform(y_train) # 2차원을 받는다.
+# OneHotEncoding
+ohe = OneHotEncoder(sparse_output=False)
+y_train = y_train.reshape(-1, 1)
+y_test = y_test.reshape(-1, 1)
+y_train = ohe.fit_transform(y_train)
 y_test = ohe.transform(y_test)
-
-print(y_train.shape, y_test.shape)
-# (60000, 10), (10000, 10)
-
-
 
 # =================================================================================
 # 2. 모델 구성
@@ -64,11 +39,12 @@ model = Sequential()
 # ---------------------------------------------------------------------------------
 
 model.add(Conv2D(
-    64,
+    512,
     kernel_size=(3, 3),
-    input_shape=(28, 28, 1)
+    input_shape=(32, 32, 3),
+    padding='same'
 ))
-model.add(Dropout(0.2))
+model.add(MaxPooling2D())
 
 # 입력 shape : (28, 28, 1)
 #
@@ -129,9 +105,10 @@ model.add(Dropout(0.2))
 # ---------------------------------------------------------------------------------
 
 model.add(Conv2D(
-    32,
+    256,
     kernel_size=(3, 3),
-    activation='relu'
+    activation='relu',
+    padding='same'
 ))
 
 # 이전 층의 출력:
@@ -204,9 +181,10 @@ model.add(Conv2D(
 # ---------------------------------------------------------------------------------
 
 model.add(Conv2D(
-    32,
+    128,
     kernel_size=(3, 3),
-    activation='relu'
+    activation='relu',
+    padding='same'
 ))
 
 # 입력:
@@ -235,9 +213,10 @@ model.add(Conv2D(
 # ---------------------------------------------------------------------------------
 
 model.add(Conv2D(
-    16,
+    64,
     kernel_size=(3, 3),
-    activation='relu'
+    activation='relu',
+    padding='same'
 ))
 
 # 입력:
@@ -281,7 +260,8 @@ model.add(Conv2D(
 model.add(Conv2D(
     8,
     kernel_size=(3, 3),
-    activation='relu'
+    activation='relu',
+    padding='same'
 ))
 
 # 입력:
@@ -313,14 +293,13 @@ model.add(Flatten())
 # ---------------------------------------------------------------------------------
 # Dense
 # ---------------------------------------------------------------------------------
-
+model.add(Dense(units=128, activation='relu'))
 model.add(Dense(units=64, activation='relu'))
 model.add(Dense(units=64, activation='relu'))
 model.add(Dense(units=32, activation='relu'))
-model.add(Dense(units=16, input_shape=(32, ), activation='relu'))
 
 model.add(Dense(
-    10,
+    100,
     activation='softmax'
 ))
 
@@ -359,7 +338,7 @@ model.compile(loss = 'mse', optimizer = 'adam', metrics=['accuracy'])
 
 start = time.time()
 model.fit(x_train, y_train, epochs = 30, batch_size = 100, verbose=1)
-model.fit(x_train, y_train, epochs = 50, batch_size = 2000, verbose=1)
+model.fit(x_train, y_train, epochs = 100, batch_size = 2000, verbose=1)
 
 model.compile(loss = 'categorical_crossentropy', optimizer = 'adam', metrics=['accuracy'])
 model.fit(x_train, y_train, epochs = 30, batch_size = 100, verbose=1)
