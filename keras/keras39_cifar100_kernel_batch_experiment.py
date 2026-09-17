@@ -68,7 +68,7 @@ for k_size in kernel_sizes:
         start_time = time.time()
         # verbose=1로 두면 너무 길어질 수 있어 상황에 따라 verbose=2나 0으로 줄일 수 있습니다.
         model.fit(x_train, y_train, epochs=MAX_EPOCHS, batch_size=b_size, 
-                  validation_split=0.2, callbacks=[es], verbose=1)
+                  validation_split=0.2, callbacks=[es], verbose=0)
         end_time = time.time()
         
         # 평가
@@ -91,24 +91,28 @@ for k_size in kernel_sizes:
         gc.collect()
 
 # =================================================================================
-# 4. 결과 요약 리포트
+# 4. 결과 요약 리포트 및 랭킹 (Accuracy 기준 내림차순)
 # =================================================================================
-print("\n\n" + "="*60)
-print("                  최종 실험 결과 요약 (CIFAR-100)")
-print("="*60)
-print(f"{'Kernel Size':<15} | {'Batch Size':<15} | {'Time (s)':<15} | {'Accuracy':<15}")
-print("-" * 65)
+print("\n\n" + "="*75)
+print("              최종 실험 랭킹 (CIFAR-100, Accuracy 기준)")
+print("="*75)
+print(f"{'Rank':<5} | {'Kernel Size':<15} | {'Batch Size':<12} | {'Time (s)':<10} | {'Accuracy':<10}")
+print("-" * 75)
 
-for res in results:
+# 결과를 Accuracy 기준으로 내림차순 정렬
+results.sort(key=lambda x: x['Accuracy'], reverse=True)
+
+for i, res in enumerate(results):
+    rank_str = f"{i + 1}위"
     k_str = str(res['Kernel Size'])
     b_str = str(res['Batch Size'])
     t_str = str(res['Time'])
     a_str = f"{res['Accuracy']:.4f}"
-    print(f"{k_str:<15} | {b_str:<15} | {t_str:<15} | {a_str:<15}")
+    print(f"{rank_str:<5} | {k_str:<15} | {b_str:<12} | {t_str:<10} | {a_str:<10}")
 
-print("="*60)
+print("="*75)
 
 # 가장 성능이 좋은 조합 출력
-best_res = max(results, key=lambda x: x['Accuracy'])
-print(f"\n🌟 최고 성능 조합: Kernel {best_res['Kernel Size']}, Batch {best_res['Batch Size']} -> Accuracy: {best_res['Accuracy']:.4f}\n")
+best_res = results[0]
+print(f"\n🌟 1위 최고 성능 조합: Kernel {best_res['Kernel Size']}, Batch {best_res['Batch Size']} -> Accuracy: {best_res['Accuracy']:.4f}\n")
 
