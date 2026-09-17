@@ -1,4 +1,4 @@
-# score 0.9889
+# accuracy_score 0.9816
 
 from tensorflow.keras.layers import GlobalAveragePooling2D
 import numpy as np
@@ -35,11 +35,9 @@ print(np.max(x_test), np.min(x_test))
 x_train = (x_train - 127.5) / 127.5
 x_test = (x_test - 127.5) / 127.5
 
-x_train = x_train.reshape(-1, 28,28, 1)
-x_test = x_test.reshape(-1, 28,28, 1)
-
-print(np.max(x_train), np.min(x_train)) # 1.0 -1.0
-print(np.max(x_test), np.min(x_test)) # 1.0 -1.0
+x_train = x_train.reshape(-1, 28*28)
+x_test = x_test.reshape(-1, 28*28)
+print(x_train.shape, x_test.shape)
 
 from sklearn.preprocessing import OneHotEncoder
 ohe = OneHotEncoder(sparse_output=False) #디폴트 값은 True
@@ -48,140 +46,35 @@ y_test = y_test.reshape(-1,1)
 y_train = ohe.fit_transform(y_train) # 2차원을 받는다.
 y_test = ohe.transform(y_test)
 
-print(y_train.shape, y_test.shape)
-# (60000, 10), (10000, 10)
-
-
 
 # =================================================================================
 # 2. 모델 구성
 # =================================================================================
 
 model = Sequential()
-
-
-# ---------------------------------------------------------------------------------
-# Conv2D 1
-# ---------------------------------------------------------------------------------
-
-model.add(Conv2D(
-    64,
-    kernel_size=(3, 3),
-    input_shape=(28, 28, 1)
-))
-model.add(Dropout(0.2))
-
-model.add(Conv2D(
-    32,
-    kernel_size=(3, 3),
-    activation='relu'
-))
-
-model.add(Conv2D(
-    32,
-    kernel_size=(3, 3),
-    activation='relu'
-))
-
-# 입력: (24, 24, 32)
-# 필터 하나의 실제 크기: (3, 3, 32)
-# 필터 개수: 32개
-#
-# 가로/세로: (24 - 3) + 1 = 22
-#
-# 출력 shape:
-#     (22, 22, 32)
-
-
-# ---------------------------------------------------------------------------------
-# Conv2D 4
-# ---------------------------------------------------------------------------------
-
-model.add(Conv2D(
-    16,
-    kernel_size=(3, 3),
-    activation='relu'
-))
-
-# 입력: (22, 22, 32)
-# 필터 하나의 실제 크기: (3, 3, 32)
-# 필터 개수: 16개
-#
-# 가로/세로: (22 - 3) + 1 = 20
-#
-# 출력 shape:
-#     (20, 20, 16)
-
-
-# ---------------------------------------------------------------------------------
-# Dropout
-# ---------------------------------------------------------------------------------
-
-# model.add(Dropout(0.2))
-
-# shape는 그대로 유지된다.
-#
-# 입력  : (20, 20, 16)
-# 출력  : (20, 20, 16)
-
-
-# ---------------------------------------------------------------------------------
-# Conv2D 5
-# ---------------------------------------------------------------------------------
-
-model.add(Conv2D(
-    8,
-    kernel_size=(3, 3),
-    activation='relu'
-))
-
-# 입력: (20, 20, 16)
-# 필터 하나의 실제 크기: (3, 3, 16)
-# 필터 개수: 8개
-#
-# 가로/세로: (20 - 3) + 1 = 18
-#
-# 출력 shape:
-#     (18, 18, 8)
-
-
-model.add(GlobalAveragePooling2D())
-
 # ---------------------------------------------------------------------------------
 # Dense
 # ---------------------------------------------------------------------------------
-
+model.add(Dense(units=64, input_shape=(28*28, )))
 model.add(Dense(units=64, activation='relu'))
 model.add(Dense(units=64, activation='relu'))
 model.add(Dense(units=32, activation='relu'))
-model.add(Dense(units=16, input_shape=(32, ), activation='relu'))
 
 model.add(Dense(
     10,
     activation='softmax'
 ))
 
-# 주의:
-#
-# 이전 Conv2D의 출력은 (18, 18, 8) 이었다.
-# 이를 Flatten() 층에 통과시키면 1차원 배열로 평탄화된다.
-#
-# 18 x 18 x 8 = 2592
-# 즉, Flatten() 층의 출력 shape는 (2592,) 이 된다.
-#
-# 그 후 Dense 층들을 거치며 최종적으로 10개의 클래스에 대한 확률을 출력한다.
-# 최종 출력 shape: (10,)
-
 #3. 컴파일, 훈련
 model.compile(loss = 'mse', optimizer = 'adam', metrics=['accuracy'])
 
 start = time.time()
 model.fit(x_train, y_train, epochs = 30, batch_size = 100, verbose=1)
-model.fit(x_train, y_train, epochs = 50, batch_size = 2000, verbose=1)
+model.fit(x_train, y_train, epochs = 500, batch_size = 200000, verbose=1)
 
 model.compile(loss = 'categorical_crossentropy', optimizer = 'adam', metrics=['accuracy'])
 model.fit(x_train, y_train, epochs = 30, batch_size = 100, verbose=1)
-model.fit(x_train, y_train, epochs = 100, batch_size = 2000, verbose=1)
+model.fit(x_train, y_train, epochs = 500, batch_size = 200000, verbose=1)
 
 end = time.time()
 print(f"{end - start}")
