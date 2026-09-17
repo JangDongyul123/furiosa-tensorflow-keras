@@ -111,3 +111,4 @@ print("="*60)
 # 가장 성능이 좋은 조합 출력
 best_res = max(results, key=lambda x: x['Accuracy'])
 print(f"\n🌟 최고 성능 조합: Kernel {best_res['Kernel Size']}, Batch {best_res['Batch Size']} -> Accuracy: {best_res['Accuracy']:.4f}\n")
+
