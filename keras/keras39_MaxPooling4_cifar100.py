@@ -243,4 +243,4 @@ y_test_arg = np.argmax(y_test, axis=1)
 acc_score = accuracy_score(y_test_arg, y_pred_meta_arg)
 print(f"Final Stacking Ensemble Accuracy_score: {acc_score:.4f}")
 
-# 1차 0.3363
+# 1차 0.3444
