@@ -42,9 +42,14 @@ print(f"Test Data: {x_test.shape}")
 def create_model_1():
     model = Sequential([
         Conv2D(32, kernel_size=(3, 3), padding='same', activation='relu', input_shape=(32, 32, 3)),
-        Conv2D(16, kernel_size=(3, 3), padding='same', activation='relu'),
+        Conv2D(32, kernel_size=(3, 3), padding='same', activation='relu'),
+        MaxPooling2D(2, 2),
+        Conv2D(64, kernel_size=(3, 3), padding='same', activation='relu'),
+        Conv2D(64, kernel_size=(3, 3), padding='same', activation='relu'),
+        MaxPooling2D(2, 2),
         Flatten(),
-        Dense(64, activation='relu'),
+        Dense(128, activation='relu'),
+        Dropout(0.3),
         Dense(10, activation='softmax')
     ], name="BaseModel_1_StandardCNN")
     return model
@@ -53,42 +58,54 @@ def create_model_2():
     model = Sequential([
         Conv2D(64, kernel_size=(3, 3), padding='same', activation='relu', input_shape=(32, 32, 3)),
         Conv2D(64, kernel_size=(3, 3), padding='same', activation='relu'),
-        Dropout(0.3), # Dropout 추가
+        MaxPooling2D(2, 2),
+        Conv2D(128, kernel_size=(3, 3), padding='same', activation='relu'),
+        Conv2D(128, kernel_size=(3, 3), padding='same', activation='relu'),
+        MaxPooling2D(2, 2),
         Flatten(),
-        Dense(128, activation='relu'),
-        Dropout(0.3), # Dropout 추가
+        Dense(256, activation='relu'),
         Dense(10, activation='softmax')
     ], name="BaseModel_2_DeepCNN")
     return model
 
 def create_model_3():
     model = Sequential([
-        Conv2D(16, kernel_size=(5, 5), padding='same', activation='relu', input_shape=(32, 32, 3)),
-        Conv2D(16, kernel_size=(5, 5), padding='same', activation='relu'),
+        Conv2D(32, kernel_size=(5, 5), padding='same', activation='relu', input_shape=(32, 32, 3)),
+        MaxPooling2D(2, 2),
+        Conv2D(64, kernel_size=(5, 5), padding='same', activation='relu'),
+        MaxPooling2D(2, 2),
+        Conv2D(128, kernel_size=(3, 3), padding='same', activation='relu'),
         Flatten(),
-        Dense(32, activation='relu'),
+        Dense(128, activation='relu'),
         Dense(10, activation='softmax')
     ], name="BaseModel_3_LargeKernelCNN")
     return model
 
 def create_model_4():
-    # 4. 얕지만 필터 수가 많은 CNN
+    # 4. 필터 수가 많은 CNN (Deep)
     model = Sequential([
         Conv2D(128, kernel_size=(3, 3), padding='same', activation='relu', input_shape=(32, 32, 3)),
-        Dropout(0.3), # Dropout 추가
+        Conv2D(128, kernel_size=(3, 3), padding='same', activation='relu'),
+        MaxPooling2D(2, 2),
+        Conv2D(256, kernel_size=(3, 3), padding='same', activation='relu'),
+        MaxPooling2D(2, 2),
         Flatten(),
-        Dense(64, activation='relu'),
+        Dense(256, activation='relu'),
         Dense(10, activation='softmax')
-    ], name="BaseModel_4_WideShallowCNN")
+    ], name="BaseModel_4_WideDeepCNN")
     return model
 
 def create_model_5():
-    # 5. AveragePooling 을 사용하는 CNN
+    # 5. AveragePooling 을 사용하는 CNN (Deep)
     model = Sequential([
         Conv2D(32, kernel_size=(3, 3), padding='same', activation='relu', input_shape=(32, 32, 3)),
         Conv2D(32, kernel_size=(3, 3), padding='same', activation='relu'),
+        AveragePooling2D(pool_size=(2, 2)),
+        Conv2D(64, kernel_size=(3, 3), padding='same', activation='relu'),
+        Conv2D(64, kernel_size=(3, 3), padding='same', activation='relu'),
         Flatten(),
-        Dense(64, activation='relu'),
+        Dense(128, activation='relu'),
+        Dropout(0.3),
         Dense(10, activation='softmax')
     ], name="BaseModel_5_AvgPoolCNN")
     return model
