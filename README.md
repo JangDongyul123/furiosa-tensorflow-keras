@@ -186,21 +186,13 @@ Feature N개 → N+1 차원의 초평면
 ```
 
 <p align="center">
-
   <a href="https://velog.io/@wordi/%EA%B7%80-%EC%B4%88%ED%8F%89%EB%A9%B4-%EB%89%B4%EB%9F%B0-ReLU-%EC%88%9C%EC%A0%84%ED%8C%8C%EC%99%80-%EC%97%AD%EC%A0%84%ED%8C%8C">
-
     <img
-
       src="./images/hyperplane-feature.png"
-
       alt="입력 Feature 수에 따른 직선과 평면"
-
       width="100%"
-
     >
-
   </a>
-
 </p>
 
 
