@@ -147,7 +147,8 @@ CNN · Image Classification
 | :---: | --- |
 | **01** | **🧠 신경망 기초**<br>개발 환경 · Batch · 신경망 · 가중치와 편향 · 역전파 · Loss<br><br>📘 [1일차 필기 보기](./keras/1일차%20필기.md) |
 | **02** | **🔢 텐서와 행렬**<br>스칼라 · 벡터 · 행렬 · 텐서 · 행렬곱 · Shape · Sequential Model<br><br>📘 [2일차 필기 보기](./keras/2일차%20필기.md) |
-| **03** | **✂️ 데이터 분리와 MSE**<br>Train / Test Split · `train_test_split` · Mean Squared Error<br><br>📘 [3일차 필기 보기](./keras/3일차%20필기.md) |
+| **03** | **✂️ 데이터 분리와 MSE**<br>Train / Test Split · `train_test_split` · Mean Squared Error<br><br>📘 [3일차 필기 보기](./keras/3일차%20필기.md)<br>✍️ [편미분과 체인룰로 Gradient를 직접 계산해보자
+](https://velog.io/@wordi/%ED%8E%B8%EB%AF%B8%EB%B6%84%EA%B3%BC-%EC%B2%B4%EC%9D%B8%EB%A3%B0%EB%A1%9C-Gradient%EB%A5%BC-%EC%A7%81%EC%A0%91-%EA%B3%84%EC%82%B0%ED%95%B4%EB%B3%B4%EC%9E%90) |
 | **04** | **📈 회귀와 분류**<br>데이터의 중요성 · Regression · Classification · 데이터 전처리<br><br>📘 [4일차 필기 보기](./keras/4일차%20필기.md)<br>✍️ [MSE · RMSE · RMSLE · R²의 관계](https://velog.io/@wordi/MSE-RMSE-RMSLE-R2%EC%9D%98-%EA%B4%80%EA%B3%84) |
 | **05** | **🧩 Dense와 ReLU**<br>Dense Layer · Hidden Layer · Output Layer · ReLU · 초평면<br><br>📘 [5일차 필기 보기](./keras/5일차%20필기-%20ReLU.md)<br>✍️ [초평면 · 뉴런 · ReLU · 순전파와 역전파](https://velog.io/@wordi/%EA%B7%80-%EC%B4%88%ED%8F%89%EB%A9%B4-%EB%89%B4%EB%9F%B0-ReLU-%EC%88%9C%EC%A0%84%ED%8C%8C%EC%99%80-%EC%97%AD%EC%A0%84%ED%8C%8C) |
 | **06** | **📊 Validation과 EarlyStopping**<br>Validation · 과적합 · History 시각화 · EarlyStopping<br><br>📘 [6일차 필기 보기](./keras/6일차%20필기.md) |
