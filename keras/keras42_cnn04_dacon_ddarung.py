@@ -1,206 +1,106 @@
-# CPU 9.6초, GPU 8.32초
-
-# [실습] Min-Max Scaler 이해하기 - 따릉이 대여량 예측
-# https://dacon.io/competitions/open/235576/overview/description
-
-import time
-from tensorflow.keras.layers import Dropout
 import numpy as np
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Dense, Input
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import r2_score, mean_squared_error
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+import time
 import pandas as pd
 
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import RobustScaler
+from sklearn.metrics import r2_score, mean_squared_error, accuracy_score
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Conv2D, Flatten, Dropout
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+
+
+
+path = './_save/keras34/'
+import os
+os.makedirs(path, exist_ok=True)
+
 #1. 데이터
-path = "./_data/ddarung/" # 재사용성을 위해 경로 분리 저장
- 
-train_csv = pd.read_csv(path + "train.csv", index_col=0) 
-# index_col=0 : 첫 번째 컬럼(id)은 데이터가 아닌 인덱스로 취급하여 분석에서 제외함
-
-print(train_csv) # [1459 rows x 10 columns] 
-print(train_csv.shape)
-print(train_csv.columns)
-print(train_csv.info())
-
-# [결측치 처리] 1. 결측치가 포함된 행 삭제 (dropna)
+path_data = "./_data/ddarung/"
+train_csv = pd.read_csv(path_data + "train.csv", index_col=0)
 train_csv = train_csv.dropna()
-print(train_csv) # 삭제 후: [1328 rows x 10 columns]
-
-# train_csv에서 독립변수(x)와 종속변수(y) 분리
-x = train_csv.drop(['count'], axis=1) # 예측 목표인 'count' 컬럼을 제외하여 입력 데이터(x) 생성
-print("x: ", x) # [1328 rows x 9 columns] 
-
-y = train_csv['count'] # 예측 목표 데이터(y) 추출
-print(y)
-print(y.shape) # (1328,)
-
-# id 컬럼을 제외하면 x의 피처(컬럼)는 9개가 됩니다. id는 단순 식별자이므로 y 예측에 필요 없습니다.
-
-
-test_csv = pd.read_csv(path + "test.csv", index_col=0) # 최종 예측에 사용할 평가용 데이터 (model.predict)
-print(test_csv) #[715 * 9] 
-print(test_csv.shape)
-print(test_csv.columns)
-print(test_csv.info())
-
-
-submission = pd.read_csv(path+"submission.csv", index_col=0) # 예측 결과를 저장하여 제출할 파일 양식
-print(submission) # NaN은 결측치를 의미, [715 rows x 1 columns] 
-print(submission.shape)
-print(submission.columns)
-
-x_train, x_test, y_train, y_test= train_test_split(x,y,train_size=0.8, test_size=0.2)
-
-from sklearn.preprocessing import StandardScaler, MaxAbsScaler, MinMaxScaler
-# scaler = StandardScaler()
-
-# scaler = MaxAbsScaler()
-
-scaler = MinMaxScaler()
-
-scaler.fit(x_train)
-# =================================================================================
-# [ 스케일러 학습 (Fit) 주의사항 ]
-# x_train 데이터만 이용해서 스케일링 기준(Min/Max, Mean/Std 등)을 학습합니다.
-# x_val, x_test, 그리고 실전(Kaggle 등)의 미래 데이터는
-# 오직 x_train에서 학습한 동일한 기준으로 transform만 수행해야 합니다.
-# (Validation/Test 데이터의 정보가 스케일러에 미리 반영되는 것을 방지하기 위함)
-# =================================================================================
-
-
-x_train = scaler.transform(x_train)
-x_test = scaler.transform(x_test)
-
-print(np.min(x_train), np.max(x_train))
-print(np.min(x_test), np.max(x_test))
+x = train_csv.drop(['count'], axis=1).values
+y = train_csv['count'].values
+test_csv = pd.read_csv(path_data + "test.csv", index_col=0)
+submission = pd.read_csv(path_data+"submission.csv", index_col=0)
 
 print(x.shape, y.shape)
 
-print(x, y)
+# 1단계 : 전체 -> train(70%) / test(30%)
+# 2단계 : train -> train(70%) / val(30%)
+x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=0.7, random_state=77, shuffle=True)
+x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, train_size=0.7, random_state=77, shuffle=True)
 
+scaler = RobustScaler()
+x_train = scaler.fit_transform(x_train) # x_train 으로 기준을 구하고 변환까지 한 번에
+x_test = scaler.transform(x_test)       # test 는 transform 만 (fit 하면 데이터 누수)
+x_val = scaler.transform(x_val)         # val 도 transform 만 (빠뜨리면 검증에 원본 단위가 들어간다)
+
+# Conv2D 는 (행, 열, 채널) 4차원 입력이 필요하다 -> 데이터를 3 x 3 x 1 로 바꾼다
+x_train = x_train.reshape(-1, 3, 3, 1)
+x_val = x_val.reshape(-1, 3, 3, 1)
+x_test = x_test.reshape(-1, 3, 3, 1)
 
 #2. 모델 구성
-# model = Sequential()
-# model.add(Dense(64, input_dim=9))
-# model.add(Dropout(0.2))
-# model.add(Dense(256))
-# model.add(Dropout(0.2))
-# model.add(Dense(128))
-# model.add(Dropout(0.2))
-# model.add(Dense(64))
-# model.add(Dropout(0.2))
-# model.add(Dense(32))
-# model.add(Dropout(0.2))
-# model.add(Dense(1))
+model = Sequential()
+model.add(Conv2D(64, (2, 2), padding='same', activation='relu', input_shape=(3, 3, 1)))
+model.add(Conv2D(64, (2, 2), padding='same', activation='relu'))
+model.add(Conv2D(32, (1,1), padding='same', activation='relu'))
+model.add(Flatten())
+model.add(Dense(128, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(64, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(1)) # 회귀 -> 출력 1개, 활성화 함수 없음(linear)
 
-input1 = Input(shape=(9,))
-dense1 = Dense(64)(input1)
-drop1 = Dropout(0.2)(dense1)
-dense2 = Dense(256)(drop1)
-drop2 = Dropout(0.2)(dense2)
-dense3 = Dense(128)(drop2)
-drop3 = Dropout(0.2)(dense3)
-dense4 = Dense(64)(drop3)
-drop4 = Dropout(0.2)(dense4)
-dense5 = Dense(32)(drop4)
-drop5 = Dropout(0.2)(dense5)
-output1 = Dense(1)(drop5)
-model = Model(inputs=input1, outputs=output1)
-
-# ============================================================
-# EarlyStopping 설정
-# ============================================================
+model.summary()
 
 #3. 컴파일, 훈련
-model.compile(loss='mse', optimizer='adam')
+model.compile(loss='mse', optimizer='adam', metrics=['accuracy'] if 'mse' != 'mse' else [])
 
 es = EarlyStopping(
     monitor='val_loss',
-    patience=10,
     mode='min',
-    restore_best_weights= True,
-    verbose=1
+    patience=20,                # val_loss 가 20 epoch 동안 안 좋아지면 멈춘다
+    restore_best_weights=True,  # 멈춘 뒤 val_loss 가 가장 낮았던 가중치로 되돌린다
+    verbose=1,
 )
 
-############# mcp 세이브 파일명 만들기 #############
-
-import datetime
-date = datetime.datetime.now()
-print(date) # 2026-09-14 11:42:07 .201728
-print(type(date)) #<class 'datetime.datetime'>
-date = date.strftime("%m%d_%H%M") #month day, hour, minutes
-print(date)
-print(type(date)) #<class 'str'>
-
-path = './_save/keras31/'
-file_name = '_{epoch:04d}-{val_loss:.4f}.keras' # 04d는 4자리 정수, .4f는 소수점 4째자리까지
-filepath = "".join([path, "k31_" ,date,"-", file_name])
-
 mcp = ModelCheckpoint(
-    monitor = 'val_loss',
-    mode = 'auto',
-    save_best_only=True,
-    filepath = filepath,
+    monitor='val_loss',
+    mode='auto',                # val_loss 는 낮을수록 좋으므로 auto(=min)
+    save_best_only=True,        # 최고 기록이 갱신될 때만 덮어쓴다 -> 마지막에 남는 파일 = 최고 epoch 모델
+    filepath=path + 'keras34_ddarung.keras',
     verbose=1,
 )
 
 start_time = time.time()
 
-hist = model.fit(x_train, 
-          y_train, 
-          epochs=100, 
-          batch_size=32,
-          verbose=1, 
-          validation_split=0.2,
-          callbacks=[])        # EarlyStopping 콜백 적용
+hist = model.fit(x_train, y_train,
+                 epochs=100,
+                 batch_size=32,
+                 validation_data=(x_val, y_val),    # 직접 나눈 val 세트로 val_loss 계산
+                 callbacks=[es, mcp],
+                 verbose=1,
+                 )
 
 end_time = time.time()
-print(end_time - start_time)
+print("소요 시간 :", round(end_time - start_time, 2), "초")
+print("========== ========== ========== ========== ==========")
 
-#4. 평가, 예측
+#4. 평가 예측 (훈련에도 검증에도 안 쓴 x_test 로만)
+loss = model.evaluate(x_test, y_test)
+print("loss :", loss)
 
-print("========================================")
-y_predict = model.predict(x_test, batch_size = 32)
-
-from sklearn.metrics import r2_score, mean_squared_error
-
-r2 = r2_score(y_test, y_predict)
-print("r2: ", r2)
-
+y_predict = model.predict(x_test)
+r2 = r2_score(y_test, y_predict)                # 1 에 가까울수록 좋다
+print("r2 :", r2)
 mse = mean_squared_error(y_test, y_predict)
-print("mse: ", mse)
+print("RMSE :", np.sqrt(mse))
 
-def RMSE(y_test, y_predict):  # 사용자가 직접 정의한 RMSE(Root Mean Squared Error) 함수
-    return np.sqrt(mean_squared_error(y_test, y_predict))
-
-rmse = RMSE(y_test, y_predict)
-print("RMSE : ", rmse)
-
-
-print("================= history =================")
-print(hist)
-print("================= hist.history =================")
-print(hist.history)
-print("================= loss =================")
-print(hist.history['loss'])
-print("================= val_loss =================")
-print(hist.history['val_loss'])
-print("==================================")
-
-import matplotlib.pyplot as plt
-
-plt.figure(figsize=(9,6)) # 캔버스(판) 크기 설정
-plt.rcParams['font.family'] = 'Malgun Gothic' # 폰트 설정
-plt.rcParams['axes.unicode_minus'] = False 
-
-plt.plot(hist.history['loss'][2:], c='red', label='loss') # 훈련 손실
-plt.plot(hist.history['val_loss'][2:], c='blue', label='val_loss') # 검증 손실
-
-plt.legend(loc='upper right') # 우측 상단 범례 표시
-plt.title('데이콘 따릉이 예측 데이터셋 - Loss 그래프')
-plt.xlabel('Epoch') # x축
-plt.ylabel('Loss') # y축
-plt.grid() # 격자 추가
-plt.show() # 출력
+# 캐글/데이콘 제출용 파일 생성
+test_csv_scaled = scaler.transform(test_csv.values)
+test_csv_scaled = test_csv_scaled.reshape(-1, 3, 3, 1)
+y_submit = model.predict(test_csv_scaled)
+submission['count'] = y_submit
+submission.to_csv(path_data + "submission.csv")

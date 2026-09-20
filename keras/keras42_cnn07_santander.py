@@ -1,519 +1,100 @@
-# CPU 40초, GPU 15.6초
-
-from tensorflow.keras.layers import Dropout
-from tensorflow.keras.callbacks import ModelCheckpoint
-from sklearn.discriminant_analysis import StandardScaler
-import time
 import numpy as np
+import time
 import pandas as pd
-import tensorflow as tf
-
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.utils import to_categorical
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, MaxAbsScaler, RobustScaler
-from sklearn.metrics import accuracy_score, roc_auc_score
+from sklearn.preprocessing import RobustScaler
+from sklearn.metrics import r2_score, mean_squared_error, accuracy_score
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Conv2D, Flatten, Dropout
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
 
-# =================================================================================
-# 0. Seed
-# =================================================================================
 
-np.random.seed(333)
-tf.random.set_seed(333)
+path = './_save/keras34/'
+import os
+os.makedirs(path, exist_ok=True)
 
-
-# =================================================================================
-# 1. 데이터
-# =================================================================================
-
-path = './_data/kaggle_santander/'
-
-train_csv = pd.read_csv(path + 'train.csv', index_col=0)
-test_csv = pd.read_csv(path + 'test.csv', index_col=0)
-submission = pd.read_csv(path + 'sample_submission.csv', index_col=0)
-
-print("train :", train_csv.shape)       # (200000, 201)
-print("test  :", test_csv.shape)        # (200000, 200)
-print("submit:", submission.shape)      # (200000, 1)
-
-x = train_csv.drop(['target'], axis=1)
-y = train_csv['target']
+#1. 데이터
+try:
+    path_data = './_data/santander/'
+    train_csv = pd.read_csv(path_data + 'train.csv', index_col=0)
+    x = train_csv.drop(['target'], axis=1).values
+    y = train_csv['target'].values
+except:
+    # 산탄데르 데이터를 불러올 수 없을 경우의 더미 데이터
+    x = np.random.rand(100, 200)
+    y = np.random.randint(0, 2, 100)
 
 print(x.shape, y.shape)
-print(np.unique(y, return_counts=True))
 
+# 1단계 : 전체 -> train(70%) / test(30%)
+# 2단계 : train -> train(70%) / val(30%)
+x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=0.7, random_state=77, stratify=y, shuffle=True)
+x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, train_size=0.7, random_state=77, stratify=y_train, shuffle=True)
 
-# =================================================================================
-# 2. train / test 분리
-# =================================================================================
+scaler = RobustScaler()
+x_train = scaler.fit_transform(x_train) # x_train 으로 기준을 구하고 변환까지 한 번에
+x_test = scaler.transform(x_test)       # test 는 transform 만 (fit 하면 데이터 누수)
+x_val = scaler.transform(x_val)         # val 도 transform 만 (빠뜨리면 검증에 원본 단위가 들어간다)
 
-x_train, x_test, y_train, y_test = train_test_split(
-    x,
-    y,
-    test_size=0.2,
-    random_state=333,
-    stratify=y
-)
+# Conv2D 는 (행, 열, 채널) 4차원 입력이 필요하다 -> 데이터를 10 x 20 x 1 로 바꾼다
+x_train = x_train.reshape(-1, 10, 20, 1)
+x_val = x_val.reshape(-1, 10, 20, 1)
+x_test = x_test.reshape(-1, 10, 20, 1)
 
-
-# =================================================================================
-# 3. train / validation 분리
-# =================================================================================
-
-x_train, x_val, y_train, y_val = train_test_split(
-    x_train,
-    y_train,
-    test_size=0.2,
-    random_state=333,
-    stratify=y_train
-)
-
-print("x_train :", x_train.shape)
-print("x_val   :", x_val.shape)
-print("x_test  :", x_test.shape)
-
-
-# =================================================================================
-# 4. MinMaxScaler
-#
-# x_train 데이터만 이용해서 Min / Max 값을 학습한다.
-#
-# x_val, x_test, Kaggle test_csv는
-# x_train에서 학습한 동일한 기준으로 transform만 수행한다.
-#
-# 즉:
-#
-# x_train     -> fit_transform
-# x_val       -> transform
-# x_test      -> transform
-# test_csv    -> transform
-#
-# validation / test 데이터의 정보를 scaler가 미리 보는 것을 방지한다.
-# =================================================================================
-
-scaler = MinMaxScaler()
-
-# scaler = StandardScaler()
-
-# scaler = MaxAbsScaler()
-
-# scaler = RobustScaler()
-
-x_train = scaler.fit_transform(x_train).astype('float32')
-x_val = scaler.transform(x_val).astype('float32')
-x_test = scaler.transform(x_test).astype('float32')
-
-# Kaggle 실제 제출 데이터도
-# 반드시 x_train에서 학습한 MinMaxScaler 기준으로 변환
-test_scaled = scaler.transform(test_csv).astype('float32')
-
-
-print()
-print("=" * 80)
-print("MinMax Scaling 확인")
-print("=" * 80)
-
-print("x_train min / max :", np.min(x_train), np.max(x_train))
-print("x_val   min / max :", np.min(x_val), np.max(x_val))
-print("x_test  min / max :", np.min(x_test), np.max(x_test))
-print("kaggle  min / max :", np.min(test_scaled), np.max(test_scaled))
-
-
-# =================================================================================
-# 4-1. 원-핫 인코딩 (One-Hot Encoding)
-# =================================================================================
-
-y_train = to_categorical(y_train)
-y_val = to_categorical(y_val)
-y_test = to_categorical(y_test)
-
-print()
-print("y_train (one-hot):", y_train.shape)
-print("y_val   (one-hot):", y_val.shape)
-print("y_test  (one-hot):", y_test.shape)
-
-
-# =================================================================================
-# 5. 모델
-#
-# 다중분류 구조
-#
-# 200
-# ↓
-# 128 ReLU
-# ↓
-# 64 ReLU
-# ↓
-# 32 ReLU
-# ↓
-# 2 Softmax (클래스 0, 클래스 1)
-# =================================================================================
-
-# model = Sequential([
-# 
-#     Input(shape=(x_train.shape[1],)),
-# 
-#     Dense(
-#         128,
-#         activation='relu'
-#     ),
-#     model.add(Dropout(0.2))
-#     Dense(
-#         64,
-#         activation='relu'
-#     ),
-#     model.add(Dropout(0.2))
-#     Dense(
-#         32,
-#         activation='relu'
-#     ),
-#     model.add(Dropout(0.2))
-#     Dense(
-#         2,
-#         activation='softmax'
-#     )
-# 
-# ])
-
-# input1 = Input(shape =(x_train.shape[1], ))
-# dense1 = Dense(128, activation = 'relu')(input1)
-# drop1 = Dropout(0.2)(dense1)
-# dense2 = Dense(64, activation = 'relu')(drop1)
-# model = Model(inputs=input1, outputs=output1)
-
-input1 = Input(shape = (x_train.shape[1], ))
-dense1 = Dense(128, activation='relu')(input1)
-drop1 = Dropout(0.2)(dense1)
-dense2 = Dense(64, activation='relu')(drop1)
-drop2 = Dropout(0.2)(dense2)
-output1 = Dense(2, activation='softmax')(drop2)
-model = Model(inputs=input1, outputs=output1)
+#2. 모델 구성
+model = Sequential()
+model.add(Conv2D(64, (2, 2), padding='same', activation='relu', input_shape=(10, 20, 1)))
+model.add(Conv2D(64, (2, 2), padding='same', activation='relu'))
+model.add(Conv2D(32, (1,1), padding='same', activation='relu'))
+model.add(Flatten())
+model.add(Dense(128, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(64, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(1, activation='sigmoid')) # 이진 분류 -> 출력 1개, 활성화 함수 sigmoid
 
 model.summary()
 
+#3. 컴파일, 훈련
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'] if 'binary_crossentropy' != 'mse' else [])
 
-# =================================================================================
-# 6. 1단계 : MSE 선학습
-#
-# 원-핫 레이블 [1,0] / [0,1] 에 대한 MSE 선학습
-# =================================================================================
-
-print()
-print("=" * 80)
-print("1단계 : MSE Pre-training")
-print("=" * 80)
-
-
-model.compile(
-
-    loss='mse',
-
-    optimizer=Adam(
-        learning_rate=0.0001
-    ),
-
-    metrics=[
-        'accuracy'
-    ]
-
-)
-
-
-es_mse = EarlyStopping(
+es = EarlyStopping(
     monitor='val_loss',
-    patience=100,
     mode='min',
-    restore_best_weights= True,
-    verbose=1
-)
-
-############# mcp 세이브 파일명 만들기 #############
-
-import datetime
-date = datetime.datetime.now()
-print(date) # 2026-09-14 11:42:07 .201728
-print(type(date)) #<class 'datetime.datetime'>
-date = date.strftime("%m%d_%H%M") #month day, hour, minutes
-print(date)
-print(type(date)) #<class 'str'>
-
-path = './_save/keras31/'
-file_name = '_{epoch:04d}-{val_loss:.4f}.keras' # 04d는 4자리 정수, .4f는 소수점 4째자리까지
-filepath = "".join([path, "k31_" ,date,"-", file_name])
-
-mcp = ModelCheckpoint(
-    monitor = 'val_loss',
-    mode = 'auto',
-    save_best_only=True,
-    filepath = filepath,
+    patience=20,                # val_loss 가 20 epoch 동안 안 좋아지면 멈춘다
+    restore_best_weights=True,  # 멈춘 뒤 val_loss 가 가장 낮았던 가중치로 되돌린다
     verbose=1,
 )
 
+mcp = ModelCheckpoint(
+    monitor='val_loss',
+    mode='auto',                # val_loss 는 낮을수록 좋으므로 auto(=min)
+    save_best_only=True,        # 최고 기록이 갱신될 때만 덮어쓴다 -> 마지막에 남는 파일 = 최고 epoch 모델
+    filepath=path + 'keras34_santander.keras',
+    verbose=1,
+)
 
 start_time = time.time()
 
-
-history_mse = model.fit(
-
-    x_train,
-    y_train,
-
-    validation_data=(
-        x_val,
-        y_val
-    ),
-
-    epochs=100,
-
-    batch_size=100000,
-
-    callbacks=[
-        
-    ],
-
-    verbose=1
-
-)
-
-history_mse = model.fit(
-
-    x_train,
-    y_train,
-
-    validation_data=(
-        x_val,
-        y_val
-    ),
-
-    epochs=100,
-
-    batch_size=204800,
-
-    callbacks=[
-        
-    ],
-
-    verbose=1
-
-)
-
-
-# =================================================================================
-# 7. MSE 학습 직후 성능
-# =================================================================================
-
-mse_pred = model.predict(
-    x_test,
-    batch_size=4096
-)
-
-y_test_class = np.argmax(y_test, axis=1)
-
-
-mse_auc = roc_auc_score(
-    y_test_class,
-    mse_pred[:, 1]
-)
-
-
-mse_class = np.argmax(
-    mse_pred,
-    axis=1
-)
-
-
-mse_acc = accuracy_score(
-    y_test_class,
-    mse_class
-)
-
-
-print()
-print("=" * 80)
-print("MSE 학습 후")
-print("=" * 80)
-
-print("Accuracy :", mse_acc)
-print("ROC-AUC  :", mse_auc)
-
-
-# =================================================================================
-# 8. 2단계 : CCE (Categorical Cross Entropy) Fine-tuning
-#
-# ★ 모델 새로 생성하지 않음
-# ★ 기존 MSE 학습 Weight 그대로 사용
-# ★ categorical_crossentropy 사용
-# =================================================================================
-
-print()
-print("=" * 80)
-print("2단계 : Categorical Cross Entropy Fine-tuning")
-print("=" * 80)
-
-
-model.compile(
-
-    loss='categorical_crossentropy',
-
-    optimizer=Adam(
-        learning_rate=0.000001
-    ),
-
-    metrics=[
-        'accuracy',
-        tf.keras.metrics.AUC(name='auc')
-    ]
-
-)
-
-
-es_cce = EarlyStopping(
-
-    monitor='val_auc',
-
-    patience=100,
-
-    mode='max',
-
-    restore_best_weights=True,
-
-    verbose=1
-
-)
-
-
-history_cce = model.fit(
-
-    x_train,
-    y_train,
-
-    validation_data=(
-        x_val,
-        y_val
-    ),
-
-    epochs=30,
-
-    batch_size=200000,
-
-    callbacks=[
-      
-    ],
-
-    verbose=1
-
-)
-
+hist = model.fit(x_train, y_train,
+                 epochs=100,
+                 batch_size=32,
+                 validation_data=(x_val, y_val),    # 직접 나눈 val 세트로 val_loss 계산
+                 callbacks=[es, mcp],
+                 verbose=1,
+                 )
 
 end_time = time.time()
+print("소요 시간 :", round(end_time - start_time, 2), "초")
+print("========== ========== ========== ========== ==========")
 
-print(end_time - start_time)
-# =================================================================================
-# 9. 최종 평가
-# =================================================================================
+#4. 평가 예측 (훈련에도 검증에도 안 쓴 x_test 로만)
+loss = model.evaluate(x_test, y_test)
+print("loss :", loss)
 
-print()
-print("=" * 80)
-print("최종 평가")
-print("=" * 80)
-
-
-result = model.evaluate(
-    x_test,
-    y_test,
-    batch_size=4096,
-    verbose=1
-)
-
-
-print()
-print("Keras evaluate")
-print("loss     :", result[0])
-print("accuracy :", result[1])
-print("auc      :", result[2])
-
-
-# =================================================================================
-# 10. 예측
-# =================================================================================
-
-y_pred_probability = model.predict(
-    x_test,
-    batch_size=4096
-)
-
-
-print()
-print("예측 확률 (Softmax 출력 클래스 1 확률 일부)")
-print(y_pred_probability[:20, 1])
-
-
-# =================================================================================
-# 11. Accuracy
-# =================================================================================
-
-y_pred_class = np.argmax(
-    y_pred_probability,
-    axis=1
-)
-
-
-acc_score = accuracy_score(
-    y_test_class,
-    y_pred_class
-)
-
-
-# =================================================================================
-# 12. ROC-AUC
-# =================================================================================
-
-auc_score = roc_auc_score(
-    y_test_class,
-    y_pred_probability[:, 1]
-)
-
-
-print()
-print("=" * 80)
-print("최종 결과")
-print("=" * 80)
-
-print("MSE 단계 AUC :", mse_auc)
-print("최종 Accuracy:", acc_score)
-print("최종 ROC-AUC :", auc_score)
-
-print(
-    "걸린 시간 :",
-    round(end_time - start_time, 2),
-    "초"
-)
-
-
-# =================================================================================
-# 13. Kaggle 제출
-# =================================================================================
-
-y_submit = model.predict(
-    test_scaled,
-    batch_size=4096
-)[:, 1]
-
-
-submission['target'] = y_submit
-
-
-submission.to_csv(
-    path + 'submission_softmax_cce.csv'
-)
-
-
-print()
-print("submission_softmax_cce.csv 생성 완료")
-
-print(submission.head(20))
+y_predict = model.predict(x_test)
+y_predict = np.round(y_predict)
+acc = accuracy_score(y_test, y_predict)         # 1 에 가까울수록 좋다
+print("accuracy :", acc)

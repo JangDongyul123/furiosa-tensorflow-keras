@@ -1,311 +1,94 @@
-# CPU 13초, GPU 17초
-
-from tensorflow.keras.layers import Dropout
-from tensorflow.keras.callbacks import ModelCheckpoint
 import numpy as np
-import pandas as pd
 import time
+import pandas as pd
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.callbacks import EarlyStopping
+from sklearn.preprocessing import RobustScaler
+from sklearn.metrics import r2_score, mean_squared_error, accuracy_score
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Conv2D, Flatten, Dropout
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from sklearn.datasets import load_digits
 
-# acc : 1.0
+path = './_save/keras34/'
+import os
+os.makedirs(path, exist_ok=True)
 
-# =================================================================================
-# 1. 데이터
-# =================================================================================
-
+#1. 데이터
 datasets = load_digits()
-
-x = datasets['data']       # 입력 데이터
-y = datasets['target']     # 정답 데이터
-
-print(x.shape)  # (178, 13)
-print(y.shape)  # (178,)
-
-print(np.unique(y, return_counts=True))
-
-# (array([0, 1, 2]), array([59, 71, 48]))
-#
-# 클래스 0 : 59개
-# 클래스 1 : 71개
-# 클래스 2 : 48개
-
-# =================================================================================
-# 2. train / test 분리
-# =================================================================================
-
-'''
-현재 y는 아직 원-핫 인코딩 전이다.
-
-stratify=y의 의미:
-원래 y에 존재하는 클래스 비율을
-train과 test에서도 최대한 동일하게 유지해서 나눈다.
-'''
-
-x_train, x_test, y_train, y_test = train_test_split(
-    x,
-    y,
-    train_size=0.8,
-    random_state=66,
-    shuffle=True,
-    stratify=y
-)
-
-print(x_train.shape, x_test.shape)  # (142, 13), (36, 13)
-print(y_train.shape, y_test.shape)  # (142,), (36,)
-
-
-from sklearn.preprocessing import StandardScaler, MaxAbsScaler, MinMaxScaler, RobustScaler
-# scaler = StandardScaler()
-
-# scaler = MaxAbsScaler()
-
-# scaler = MinMaxScaler()
-
-scaler = RobustScaler()
-
-scaler.fit(x_train)
-# =================================================================================
-# [ 스케일러 학습 (Fit) 주의사항 ]
-# x_train 데이터만 이용해서 스케일링 기준(Min/Max, Mean/Std 등)을 학습합니다.
-# x_val, x_test, 그리고 실전(Kaggle 등)의 미래 데이터는
-# 오직 x_train에서 학습한 동일한 기준으로 transform만 수행해야 합니다.
-# (Validation/Test 데이터의 정보가 스케일러에 미리 반영되는 것을 방지하기 위함)
-# =================================================================================
-
-
-x_train = scaler.transform(x_train)
-x_test = scaler.transform(x_test)
-
-print(np.min(x_train), np.max(x_train))
-print(np.min(x_test), np.max(x_test))
+x = datasets.data
+y = datasets.target
 
 print(x.shape, y.shape)
 
-print(x, y)
+# 1단계 : 전체 -> train(70%) / test(30%)
+# 2단계 : train -> train(70%) / val(30%)
+x_train, x_test, y_train, y_test = train_test_split(x, y, train_size=0.7, random_state=77, stratify=y, shuffle=True)
+x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, train_size=0.7, random_state=77, stratify=y_train, shuffle=True)
 
+scaler = RobustScaler()
+x_train = scaler.fit_transform(x_train) # x_train 으로 기준을 구하고 변환까지 한 번에
+x_test = scaler.transform(x_test)       # test 는 transform 만 (fit 하면 데이터 누수)
+x_val = scaler.transform(x_val)         # val 도 transform 만 (빠뜨리면 검증에 원본 단위가 들어간다)
 
-# =================================================================================
-# 3. 원-핫 인코딩
-# =================================================================================
+# Conv2D 는 (행, 열, 채널) 4차원 입력이 필요하다 -> 데이터를 8 x 8 x 1 로 바꾼다
+x_train = x_train.reshape(-1, 8, 8, 1)
+x_val = x_val.reshape(-1, 8, 8, 1)
+x_test = x_test.reshape(-1, 8, 8, 1)
 
-'''
-다중분류의 정답이 클래스 번호로 되어 있을 때,
-원-핫 인코딩을 통해 배열 형태로 변환한다.
+#2. 모델 구성
+model = Sequential()
+model.add(Conv2D(64, (2, 2), padding='same', activation='relu', input_shape=(8, 8, 1)))
+model.add(Conv2D(64, (2, 2), padding='same', activation='relu'))
+model.add(Conv2D(32, (1,1), padding='same', activation='relu'))
+model.add(Flatten())
+model.add(Dense(128, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(64, activation='relu'))
+model.add(Dropout(0.2))
+model.add(Dense(10, activation='softmax')) # 다중 분류 -> 클래스 개수만큼 출력, 활성화 함수 softmax
 
-Wine 데이터의 클래스가 3개이므로 원-핫 인코딩 후 열이 3개 생긴다.
-'''
+model.summary()
 
-# -------------------------------------------------------------------------
-# 원-핫 방법 1. TensorFlow - to_categorical
-# -------------------------------------------------------------------------
-
-# from tensorflow.keras.utils import to_categorical
-
-# y_train = to_categorical(y_train)
-# y_test = to_categorical(y_test)
-
-# print(y_train.shape)  # (142, 3)
-# print(y_test.shape)   # (36, 3)
-
-
-# -------------------------------------------------------------------------
-# 원-핫 방법 2. pandas - get_dummies
-# -------------------------------------------------------------------------
-
-y_train = pd.get_dummies(y_train, dtype='float32').values
-y_test = pd.get_dummies(y_test, dtype='float32').values
-
-
-# -------------------------------------------------------------------------
-# 원-핫 방법 3. sklearn - OneHotEncoder
-# -------------------------------------------------------------------------
-
-# from sklearn.preprocessing import OneHotEncoder
-#
-# y_train = y_train.reshape(-1, 1)
-# y_test = y_test.reshape(-1, 1)
-#
-# encoder = OneHotEncoder(sparse_output=False)
-#
-# y_train = encoder.fit_transform(y_train)
-# y_test = encoder.transform(y_test)
-
-
-# =================================================================================
-# 4. 모델 구성
-# =================================================================================
-
-# model = Sequential()
-# 
-# model.add(
-#     Dense(
-#         64,
-#         activation='relu',
-#         input_dim=x.shape[1]
-#     )
-# )
-# model.add(Dropout(0.2)),
-# model.add(Dense(32, activation='relu'))
-# model.add(Dropout(0.2)),
-# model.add(Dense(16, activation='relu'))
-# model.add(Dropout(0.2)),
-# model.add(
-#     Dense(
-#         10,
-#         activation='softmax'
-#     )
-# )
-
-input1 = Input(shape=(x.shape[1],))
-dense1 = Dense(64, activation='relu')(input1)
-drop1 = Dropout(0.2)(dense1)
-dense2 = Dense(32, activation='relu')(drop1)
-drop2 = Dropout(0.2)(dense2)
-dense3 = Dense(16, activation='relu')(drop2)
-drop3 = Dropout(0.2)(dense3)
-output1 = Dense(10, activation='softmax')(drop3)
-model = Model(inputs=input1, outputs=output1)
-
-'''
-출력층의 뉴런이 10개인 이유:
-Digits 데이터셋의 클래스가 총 10개(0~9)이기 때문이다.
-
-softmax는 다중분류의 출력층에서 주로 사용하는 활성화 함수이다.
-모든 출력값의 합이 1이 되도록 각 클래스에 속할 확률을 계산해준다.
-'''
-
-
-# =================================================================================
-# 5. 컴파일
-# =================================================================================
-
-model.compile(
-    loss='categorical_crossentropy',
-    optimizer='adam',
-    metrics=['accuracy']
-)
-
-'''
-categorical_crossentropy는
-원-핫 인코딩된 정답을 사용하는 다중분류에서 주로 사용한다.
-'''
-
-
-# =================================================================================
-# 6. EarlyStopping
-# =================================================================================
+#3. 컴파일, 훈련
+model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'] if 'sparse_categorical_crossentropy' != 'mse' else [])
 
 es = EarlyStopping(
     monitor='val_loss',
-     patience=10,
     mode='min',
-    restore_best_weights= True,
-    verbose=1
-)
-
-############# mcp 세이브 파일명 만들기 #############
-
-import datetime
-date = datetime.datetime.now()
-print(date) # 2026-09-14 11:42:07 .201728
-print(type(date)) #<class 'datetime.datetime'>
-date = date.strftime("%m%d_%H%M") #month day, hour, minutes
-print(date)
-print(type(date)) #<class 'str'>
-
-path = './_save/keras31/'
-file_name = '_{epoch:04d}-{val_loss:.4f}.keras' # 04d는 4자리 정수, .4f는 소수점 4째자리까지
-filepath = "".join([path, "k31_" ,date,"-", file_name])
-
-mcp = ModelCheckpoint(
-    monitor = 'val_loss',
-    mode = 'auto',
-    save_best_only=True,
-    filepath = filepath,
+    patience=20,                # val_loss 가 20 epoch 동안 안 좋아지면 멈춘다
+    restore_best_weights=True,  # 멈춘 뒤 val_loss 가 가장 낮았던 가중치로 되돌린다
     verbose=1,
 )
 
-
-# =================================================================================
-# 7. 훈련
-# =================================================================================
+mcp = ModelCheckpoint(
+    monitor='val_loss',
+    mode='auto',                # val_loss 는 낮을수록 좋으므로 auto(=min)
+    save_best_only=True,        # 최고 기록이 갱신될 때만 덮어쓴다 -> 마지막에 남는 파일 = 최고 epoch 모델
+    filepath=path + 'keras34_digits.keras',
+    verbose=1,
+)
 
 start_time = time.time()
 
-model.fit(
-    x_train,
-    y_train,
-    epochs=100,
-    batch_size=16,
-    validation_split=0.2,
-    verbose=1,
-    callbacks=[]
-)
+hist = model.fit(x_train, y_train,
+                 epochs=100,
+                 batch_size=32,
+                 validation_data=(x_val, y_val),    # 직접 나눈 val 세트로 val_loss 계산
+                 callbacks=[es, mcp],
+                 verbose=1,
+                 )
 
 end_time = time.time()
+print("소요 시간 :", round(end_time - start_time, 2), "초")
+print("========== ========== ========== ========== ==========")
 
-print(end_time - start_time)
+#4. 평가 예측 (훈련에도 검증에도 안 쓴 x_test 로만)
+loss = model.evaluate(x_test, y_test)
+print("loss :", loss)
 
-
-# =================================================================================
-# 8. 평가
-# =================================================================================
-
-result = model.evaluate(x_test, y_test)
-
-print("loss :", result[0])
-print("accuracy :", result[1])
-# acc = 0.95 이상이면 합격
-
-
-# =================================================================================
-# 9. 예측
-# =================================================================================
-
-y_pred = model.predict(x_test)
-
-print("softmax 출력 (일부)")
-print(y_pred[:5])
-
-'''
-model.predict()의 결과는 softmax 출력값이다.
-각 행에서 가장 큰 값의 위치(인덱스)를 찾아서 최종 예측 클래스를 구한다.
-'''
-
-y_pred = np.argmax(y_pred, axis=1)
-
-print("예측 클래스 (일부)")
-print(y_pred[:5])
-
-
-# =================================================================================
-# 10. 원-핫 정답을 다시 클래스 번호로 변환
-# =================================================================================
-
-'''
-accuracy_score로 실제 클래스와 예측 클래스를 비교하기 위해
-원-핫 인코딩된 y_test를 다시 원래 클래스 번호 형태로 바꾼다.
-'''
-
-y_test = np.argmax(y_test, axis=1)
-
-print("실제 클래스 (일부)")
-print(y_test[:5])
-
-
-# =================================================================================
-# 11. 정확도 계산
-# =================================================================================
-
-acc_score = accuracy_score(y_test, y_pred)
-
-print('acc_score :', acc_score)
-print("걸린 시간 :", round(end_time - start_time), "초")
+y_predict = model.predict(x_test)
+y_predict = np.argmax(y_predict, axis=1)        # 다중 분류이므로 가장 높은 확률의 클래스 선택
+acc = accuracy_score(y_test, y_predict)         # 1 에 가까울수록 좋다
+print("accuracy :", acc)
