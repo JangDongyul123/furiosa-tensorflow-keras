@@ -1,8 +1,6 @@
 <div align="center">
 
-# 📘 Furiosa TensorFlow · Keras Study
-
-### TensorFlow / Keras 기반 딥러닝 학습 기록
+# 📘 Furiosa AI Agent School 1기 학습 기록
 
 수업에서 배운 개념을 **직접 코드로 구현하고**,
 
@@ -158,6 +156,7 @@ CNN · Image Classification
 | **11** | **🌿 Functional API와 Dropout**<br>Sequential · Functional Model · Dropout · Branch · Ensemble<br><br>📘 [11일차 필기 보기](./keras/11일차%20필기.md)<br>✍️ [Dropout을 아주 쉽게 이해하기](https://velog.io/@wordi/Dropout%EC%9D%84-%EC%95%84%EC%A3%BC-%EC%89%BD%EA%B2%8C-%EC%9D%B4%ED%95%98%EA%B8%B0) |
 | **12** | **🖼️ CNN과 Convolution Layer**<br>Conv2D · Kernel / Filter · Feature Map · Channel · Output Shape · Parameter<br><br>📘 [12일차 필기 보기](./keras/12일차%20필기.md) |
 | **13** | **🧩 CNN 심화**<br>Dense와 CNN · Flatten · MaxPooling2D · Stride · Padding<br><br>📘 [13일차 필기 보기](./keras/13일차%20필기.md) |
+| **10/06** | **🔍 임베딩과 벡터 저장소**<br>LangChain · Document · Chunking · Embedding · Chroma Vector Store<br><br>📘 [10월 6일 필기 보기](./keras/10월_6일_필기.md) |
 
 ---
 
