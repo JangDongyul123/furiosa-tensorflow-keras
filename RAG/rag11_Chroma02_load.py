@@ -7,7 +7,10 @@ from dotenv import load_dotenv
 
 load_dotenv()  # .env 파일 로드
 
-api_key = os.getenv("MONOROUTER_API_KEY").strip()
+api_key = os.getenv("MONOROUTER_API_KEY")
+if not api_key or not api_key.strip():
+    raise RuntimeError("MONOROUTER_API_KEY 환경 변수를 설정해 주세요.")
+api_key = api_key.strip()
 base_url = "https://monogpt.kr/api/monorouter/v1"
 
 # #01. 데이터 불러온다.

@@ -1,11 +1,14 @@
+# 11-1 카피
+
 # 개인공부 보완: ModelCheckpoint, RLR 모든 옵션을 상세하게 공부하자
 
 import os
-import hashlib
 from langchain_community.document_loaders import TextLoader
 from langchain_openai.embeddings import OpenAIEmbeddings
-from langchain_text_splitters import RecursiveCharacterTextSplitter, TextSplitter
-from langchain_chroma import Chroma
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+
+
 from dotenv import load_dotenv
 
 load_dotenv()  # .env 파일 로드
@@ -86,24 +89,16 @@ embeddings = OpenAIEmbeddings(
     # dimensions=5                  # (참고) 출력할 벡터 차원을 줄일 때 사용
 )
 
-# 03. 벡터 스토어에 저장
-DB_PATH = './furiosa-tensorflow-keras/_db/Chroma11/'
-
-# 저장
-documents = split_doc1 + split_doc2
-ids = [
-    hashlib.sha256(
-        f"{doc.metadata.get('source', '')}\0{index}\0{doc.page_content}".encode("utf-8")
-    ).hexdigest()
-    for index, doc in enumerate(documents)
-]
-
-db = Chroma.from_documents(
-    documents=documents,                  # 1. 저장할 실제 텍스트 조각(청크)들의 모음
-    ids=ids,                              # 재실행 시 같은 청크를 같은 ID로 갱신
-    embedding=embeddings,               # 2. 텍스트를 숫자로 된 벡터로 바꿔주는 임베딩 모델
-    persist_directory=DB_PATH,          # 3. 만들어진 벡터 DB를 저장할 물리적인 하드디스크 경로
-    collection_name="croma11"           # 4. DB 내부에서 데이터를 구분하는 Collection 이름
+db = FAISS.from_documents(
+    documents = split_doc1 + split_doc2,
+    embedding = embeddings
 )
 
-print("Chroma 문서 저장 끝")
+DB_PATH = './_db/Faiss17'
+
+db.save_local(
+    folder_path=DB_PATH,
+    index_name = 'faiss_index17'
+)
+
+# **피클(pickle)**은 보통 Python 객체를 파일로 저장했다가 다시 불러오는 직렬화 방식

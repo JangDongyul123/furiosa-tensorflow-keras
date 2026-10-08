@@ -16,7 +16,6 @@ from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Conv1D
 from tensorflow.keras.callbacks import ModelCheckpoint
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
 
 # ==========================================
 # 1. 데이터 불러오기 및 전처리
@@ -45,10 +44,12 @@ total_len = (len(df) // size) * size
 # (전체 원본 데이터) 맨 뒤에서부터 420,480개만 가져옵니다. (가장 오래된 71줄은 버림)
 # 딥러닝(GPU)은 float32 연산을 많이 사용하므로 판다스 기본 float64를 float32로 줄이면 메모리 사용량도 감소합니다.
 x_all = df.drop('wd (deg)', axis=1).astype(np.float32).values[-total_len:]
-y_all = df['wd (deg)'].astype(np.float32).values[-total_len:]
+y_degrees = df['wd (deg)'].astype(np.float32).values[-total_len:]
+y_radians = np.deg2rad(y_degrees)
+y_all = np.column_stack((np.sin(y_radians), np.cos(y_radians))).astype(np.float32)
 
 # x_all.shape = (420480, 13)
-# y_all.shape = (420480,)
+# y_all.shape = (420480, 2)  # 각 timestep의 sin/cos 풍향
 
 # 2단계: reshape(-1, 144, 13)
 # 길다란 데이터를 144개씩 끊어서 여러 개의 3차원 Block으로 만듭니다.
@@ -67,17 +68,18 @@ y_all = df['wd (deg)'].astype(np.float32).values[-total_len:]
 # 우리 코드에서는 전체 420,480줄을 144개로 나누면 2,920이므로
 # x는 (2920, 144, 13) 형태가 됩니다.
 x_blocks = x_all.reshape(-1, 144, 13)
-y_blocks = y_all.reshape(-1, 144, 1)
+y_blocks = y_all.reshape(-1, size, 2)
+y_degree_blocks = y_degrees.reshape(-1, size, 1)
 
 # x_blocks.shape = (2920, 144, 13)
 # batch/block = 2920
 # timestamp = 144
 # feature = 13
 #
-# y_blocks.shape = (2920, 144, 1)
+# y_blocks.shape = (2920, 144, 2)
 # batch/block = 2920
 # timestamp = 144
-# target feature = 1
+# target features = sin(wd), cos(wd)
 
 print("전체 데이터를 144개씩 묶은 총 상자(덩어리) 수:", x_blocks.shape[0])
 
@@ -85,7 +87,7 @@ print("전체 데이터를 144개씩 묶은 총 상자(덩어리) 수:", x_block
 # 파이썬에서 [-1]은 마지막 요소를 뜻합니다.
 
 # [예측용 데이터 빼놓기]
-y_predict_true = y_blocks[-1:]  # 마지막 Block: 최종 실제 정답
+y_predict_true = y_degree_blocks[-1:]  # 마지막 Block: 각도 단위의 최종 실제 정답
 x_predict = x_blocks[-2:-1]     # 마지막 정답 바로 전 Block: 최종 예측 입력
 
 # [훈련용 데이터 엇갈려서 주기]
@@ -99,26 +101,13 @@ y_train_full = y_blocks[1:-1]   # Block 2 ~ 2919
 # ...
 # x_predict = 2919일차 → y_predict_true = 2920일차
 
-# 4단계: Train / Val 분리
-# 위에서 만든 2918쌍을 8:2 비율로 훈련용과 검증용으로 나눕니다.
-x_train, x_val, y_train, y_val = train_test_split(
-    x_train_full,
-    y_train_full,
-    test_size=0.2,
-    random_state=42
-)
+# 4단계: 시간 순서를 유지해 Train / Validation 분리
+# 미래 날짜가 훈련 데이터에 섞이지 않도록 앞 80%를 훈련, 뒤 20%를 검증으로 둔다.
+split_idx = int(len(x_train_full) * 0.8)
+x_train, x_val = x_train_full[:split_idx], x_train_full[split_idx:]
+y_train, y_val = y_train_full[:split_idx], y_train_full[split_idx:]
 
-# 수업 필기: train_test_split으로 8:2 Train / Validation 분리
-# 보완: train_test_split()은 기본값이 shuffle=True이므로 시계열 데이터의 시간 순서를 섞는다.
-#       일반적인 미래 예측 문제에서는 미래 데이터를 Training에 넣고 과거 데이터를 Validation에 넣는 상황이 생길 수 있다.
-#       따라서 실제 시계열 검증에서는 시간 순서를 유지하는 방식이 더 적절하다.
-#
-# 예:
-# split_idx = int(len(x_train_full) * 0.8)
-# x_train = x_train_full[:split_idx]
-# y_train = y_train_full[:split_idx]
-# x_val = x_train_full[split_idx:]
-# y_val = y_train_full[split_idx:]
+# 시계열 데이터이므로 shuffle 기반 분할 대신 시간 순서를 유지한다.
 
 # ==========================================
 # ★ 1-2. 데이터 스케일링 (Data Leakage 방지)
@@ -143,21 +132,8 @@ x_train = x_train.reshape(-1, 144, 13)
 x_val = x_val.reshape(-1, 144, 13)
 x_predict = x_predict.reshape(-1, 144, 13)
 
-# Y(정답) 데이터도 스케일링합니다.
-# 수업 필기: Y도 기울기 폭발 방지를 위해 동일하게 스케일링한다.
-# 보완: Y 스케일링은 단순히 "기울기 폭발 방지"만을 위한 것은 아니다.
-#       Target 값의 범위를 줄이면 Loss와 Gradient의 수치 범위가 안정되어 최적화가 쉬워질 수 있다.
-y_train = y_train.reshape(-1, 1)
-y_val = y_val.reshape(-1, 1)
-
-scaler_y = MinMaxScaler()
-y_train = scaler_y.fit_transform(y_train)  # 기준은 오직 Train
-y_val = scaler_y.transform(y_val)
-
-y_train = y_train.reshape(-1, 144, 1)
-y_val = y_val.reshape(-1, 144, 1)
-
-# y_predict_true는 마지막에 실제 예측값과 비교할 원본 정답이므로 스케일링하지 않는다.
+# 풍향 target은 sin/cos로 변환되어 [-1, 1] 범위이므로 별도 MinMaxScaler는 사용하지 않는다.
+# y_predict_true에는 평가용 원본 각도(degree)를 보존한다.
 
 print("훈련 데이터 쉐이프:", x_train.shape, y_train.shape)
 print("검증 데이터 쉐이프:", x_val.shape, y_val.shape)
@@ -195,13 +171,13 @@ save_path = 'c:/study/furiosa-tensorflow-keras/keras/_save/keras58/'
 if not os.path.exists(save_path):
     os.makedirs(save_path)
 
-model_files = glob.glob(save_path + '*.keras')
+model_files = glob.glob(os.path.join(save_path, 'jena_wd_conv1d_*.keras'))
 
 from tensorflow.keras.layers import Input, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
 
 if len(model_files) > 0:
-    # 저장된 모델 중 가장 최근 수정된 모델을 찾아서 불러옵니다.
+    # 이 Conv1D 실험이 저장한 모델만 불러와 다른 구조의 모델을 잘못 읽지 않게 합니다.
     latest_model_path = max(model_files, key=os.path.getmtime)
     print(f"\n[알림] 저장된 가장 최근 모델을 불러와서 이어서 훈련(Resume Training)합니다: {latest_model_path}")
     model = load_model(latest_model_path)
@@ -251,9 +227,9 @@ else:
     # 입력 : (N, 144, 64)
     # 출력 : (N, 144, 64)
 
-    model.add(Dense(1))
-    # 각 timestamp마다 값 1개씩 출력
-    # 출력 : (N, 144, 1)
+    model.add(Dense(2))
+    # 각 timestamp마다 풍향의 sin/cos 값 2개를 출력
+    # 출력 : (N, 144, 2)
 
     model.compile(
         loss='mse',
@@ -282,9 +258,9 @@ else:
 #
 # (N, 144, 64)
 #
-# ↓ Dense(1)
+# ↓ Dense(2)  # 풍향을 sin/cos 두 값으로 예측
 #
-# (N, 144, 1)
+# (N, 144, 2)
 #
 # ★ Conv1D에서 filters는 출력 feature(channel)의 개수가 된다.
 # ★ kernel_size는 한 번에 몇 개의 연속된 timestep을 볼 것인지를 의미한다.
@@ -297,8 +273,8 @@ else:
 import datetime
 
 date = datetime.datetime.now().strftime("%m%d_%H%M")
-mcp_filename = '{epoch:04d}-{val_loss:.4f}.keras'
-filepath = save_path + 'k58_' + date + '_' + mcp_filename
+mcp_filename = 'jena_wd_conv1d_' + date + '_{epoch:04d}-{val_loss:.4f}.keras'
+filepath = os.path.join(save_path, mcp_filename)
 
 mcp = ModelCheckpoint(
     monitor='val_loss',
@@ -352,20 +328,25 @@ model.fit(
 loss = model.evaluate(x_val, y_val)
 print('val loss :', loss)
 
-# 훈련에 사용하지 않은 마지막 하루 데이터(x_predict)를 입력해 다음 하루를 예측
+# 훈련에 사용하지 않은 마지막 하루 데이터(x_predict)를 입력해 다음 하루의 풍향(sin/cos)을 예측
 result = model.predict(x_predict)
 
-# result.shape = (1, 144, 1)
+# result.shape = (1, 144, 2)
 
-# ★ 스케일링 복구 (Inverse Transform)
-# 예측된 결과를 원래 Target 단위로 되돌립니다.
-result = scaler_y.inverse_transform(
-    result.reshape(-1, 1)
-).reshape(1, 144, 1)
+predicted_degrees = np.mod(
+    np.degrees(np.arctan2(result[0, :, 0], result[0, :, 1])),
+    360.0,
+)
+actual_degrees = y_predict_true[0, :, 0]
 
-print('예측결과 shape : ', result.shape)  # (1, 144, 1)
-print('첫 5개 예측값 : \n', result[0, :5, 0])
+# 원형 오차를 -180~180 범위로 계산해 359도와 1도의 차이를 2도로 처리한다.
+angular_error = (predicted_degrees - actual_degrees + 180.0) % 360.0 - 180.0
+rmse = np.sqrt(np.mean(np.square(angular_error)))
+
+print('예측결과 shape : ', predicted_degrees.shape)  # (144,)
+print('첫 5개 예측값 : \n', predicted_degrees[:5])
 print('첫 5개 실제값 : \n', y_predict_true[0, :5, 0])
+print('풍향 원형 RMSE (degree) :', rmse)
 
 # ==========================================
 # 5. 결과를 CSV 파일로 저장하기
@@ -373,7 +354,7 @@ print('첫 5개 실제값 : \n', y_predict_true[0, :5, 0])
 # 예측값과 실제 정답을 비교할 수 있도록 DataFrame으로 만듭니다.
 submit_df = pd.DataFrame({
     'Actual_wd': y_predict_true[0, :, 0],  # 실제 정답 144개
-    'Predicted_wd': result[0, :, 0]        # 예측값 144개
+    'Predicted_wd': predicted_degrees     # 예측값 144개
 })
 
 csv_path = save_path + 'jena_predict_result.csv'

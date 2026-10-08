@@ -1,9 +1,6 @@
-from rag10_Embedding02 import DB_PATH
-# 수업 필기: 다른 파일에서 DB_PATH를 import한다.
-# 보완: 아래에서 DB_PATH를 다시 선언하므로 이 import 값은 결국 덮어써진다.
-#       둘 중 하나만 사용하는 것이 더 깔끔하다.
 
 import os
+import hashlib
 from langchain_community.document_loaders import TextLoader
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter, TextSplitter
@@ -12,7 +9,10 @@ from dotenv import load_dotenv
 
 load_dotenv()  # .env 파일 로드
 
-api_key = os.getenv("MONOROUTER_API_KEY").strip()
+api_key = os.getenv("MONOROUTER_API_KEY")
+if not api_key or not api_key.strip():
+    raise RuntimeError("MONOROUTER_API_KEY 환경 변수를 설정해 주세요.")
+api_key = api_key.strip()
 base_url = "https://monogpt.kr/api/monorouter/v1"
 
 from glob import glob
@@ -20,7 +20,7 @@ from glob import glob
 path = 'c:/study/furiosa-tensorflow-keras/keras/_data/rag_data/'
 
 # 폴더에서 텍스트 파일 목록 가져오기
-txt_files = glob(os.path.join(path, '*.txt'))
+txt_files = sorted(glob(os.path.join(path, '*.txt')))
 print(txt_files)
 
 # 01. 데이터 불러오기 (Document Loader)
@@ -70,9 +70,7 @@ print("첫번째 청크의 길이: ", len(texts[0].page_content))
 print("두번째 청크의 내용: ", texts[1].page_content)
 print("두번째 청크의 길이: ", len(texts[1].page_content))
 
-# 03. 임베딩
-from langchain_openai import OpenAIEmbeddings
-# 보완: 위에서 이미 OpenAIEmbeddings를 import했으므로 이 import는 중복이지만 실행상 문제는 없다.
+
 
 embeddings = OpenAIEmbeddings(
     model="text-embedding-3-small",
@@ -80,20 +78,21 @@ embeddings = OpenAIEmbeddings(
     base_url=base_url,
 )
 
-sample_text = "삼성전자의 창업자는 누구인가요?"
-vector = embeddings.embed_query(sample_text)
 
-print(vector)
-print(len(vector))  # 1536 무조건 문제 나온다.
-# 수업 필기: text-embedding-3-small → 1536차원, 무조건 문제 나온다.
-# 보완: dimensions를 별도로 지정하지 않은 text-embedding-3-small의 기본 출력은 1536차원이다.
-#       즉 문장 하나 → 숫자 1536개로 이루어진 벡터 하나로 변환된다.
 
-DB_PATH = 'c:/study/furiosa-tensorflow-keras/RAG/_data/Chroma12'
+DB_PATH = 'c:/study/furiosa-tensorflow-keras/_db/Chroma12'
 # 보완: 맨 위에서 import한 DB_PATH를 여기서 새 값으로 다시 할당하므로 이전 값은 사용되지 않는다.
+
+ids = [
+    hashlib.sha256(
+        f"{doc.metadata.get('source', '')}\0{index}\0{doc.page_content}".encode("utf-8")
+    ).hexdigest()
+    for index, doc in enumerate(texts)
+]
 
 vector_store = Chroma.from_documents(
     documents=texts,
+    ids=ids,  # 재실행 시 같은 청크를 같은 ID로 갱신
     embedding=embeddings,
     persist_directory=DB_PATH,
     collection_name='croma12'

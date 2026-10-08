@@ -107,35 +107,24 @@ model.add(Dense(1))
 # (13,1)
 
 es = EarlyStopping(
-    monitor='val_loss',
-    mode='auto',
-    patience=2000,
+    monitor='loss',
+    mode='min',
+    patience=100,
+    restore_best_weights=True,
     verbose=1,
 )
 
 rlr = ReduceLROnPlateau(
-    monitor='val_loss',
-    mode='auto',
-    patience=2000,
+    monitor='loss',
+    mode='min',
+    patience=50,
     verbose=1,
     factor=0.5,
 )
 
-# 수업 필기: EarlyStopping과 ReduceLROnPlateau에서 val_loss를 감시한다.
-# 보완: 현재 model.fit()에 validation_data 또는 validation_split이 없기 때문에 val_loss가 생성되지 않는다.
-#       따라서 현재 코드 그대로라면 val_loss를 제대로 감시할 수 없다.
-#
-# 방법 1: validation_split 사용
-# model.fit(x, y, validation_split=0.2, ...)
-#
-# 방법 2: validation_data=(x_val, y_val) 사용
-#
-# 검증 데이터를 사용하지 않을 것이라면 monitor='loss'로 바꿔야 한다.
+# 별도의 validation 데이터를 두지 않는 실습 예제라서 train loss를 감시한다.
 
-# patience=2000
-# 수업 필기: 2000 Epoch 동안 개선되지 않을 경우 EarlyStopping / Learning Rate 감소
-# 보완: 현재 epochs=1000인데 patience=2000이므로 훈련 도중 patience 조건에 도달할 수 없다.
-#       즉 사실상 EarlyStopping과 ReduceLROnPlateau가 작동하지 않는다.
+# patience는 총 epochs(1000)보다 작게 설정해 콜백이 실제로 작동할 수 있게 한다.
 
 # path = './_save/keras34/'
 # import os
